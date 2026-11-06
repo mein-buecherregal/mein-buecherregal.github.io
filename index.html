@@ -1738,6 +1738,17 @@ function parseCfg(txt){
 function baseUrl(){ return location.href.split('#')[0]; }
 function linkFor(kind, id){ return baseUrl()+'#'+kind+'='+id+'&c='+b64e(cfgShort(cloudMeta.cfg)); }
 function myName(){ return cloudMeta.myName || ''; }
+/* Gemeinsame Firebase-Verbindung für alle, die diese Seite nutzen (Datei firebase-config.json neben index.html) */
+var sharedCfgTried=null;
+function loadSharedCfg(){
+  if (cloudMeta.cfg || SANDBOX) return Promise.resolve(!!cloudMeta.cfg);
+  if (sharedCfgTried) return sharedCfgTried;
+  sharedCfgTried = fetch('firebase-config.json', {cache:'no-cache'}).then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+    var c = parseCfg(t); if (c) { cloudMeta.cfg = c; cloudMeta.sharedCfg = true; saveMeta(); return true; } return false;
+  }).catch(function(){ return false; });
+  return sharedCfgTried;
+}
+function needCloud(){ return loadSharedCfg().then(function(ok){ if (!ok) { renderCloud(); $('ovSwitch').classList.remove('open'); $('ovCloud').classList.add('open'); toast('Dafür muss die Online-Verbindung einmal eingerichtet werden.'); throw new Error('cancel'); } }); }
 
 /* ---------- Firebase laden & anmelden (anonym) ---------- */
 function loadScript(src){ return new Promise(function(res,rej){ var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=function(){ rej(new Error('script')); }; document.head.appendChild(s); }); }
@@ -1749,8 +1760,7 @@ function loadFirebase(){
 function cloudInit(){
   if (CLOUD.ready) return CLOUD.ready;
   if (SANDBOX) return Promise.reject(new Error('sandbox'));
-  if (!cloudMeta.cfg) return Promise.reject(new Error('nocfg'));
-  CLOUD.ready = loadFirebase().then(function(){
+  CLOUD.ready = loadSharedCfg().then(function(ok){ if (!ok) throw new Error('nocfg'); return loadFirebase(); }).then(function(){
     if (!firebase.apps.length) firebase.initializeApp(cloudMeta.cfg);
     CLOUD.db = firebase.firestore();
     return firebase.auth().signInAnonymously();
@@ -1760,7 +1770,7 @@ function cloudInit(){
 }
 function cloudErr(e){
   var c = (e && (e.code||e.message)) || '';
-  if (/nocfg/.test(c)) return 'Noch nicht eingerichtet.';
+  if (/nocfg/.test(c)) return 'Die Online-Verbindung ist noch nicht eingerichtet (☁️ Teilen).';
   if (/sandbox/.test(c)) return 'Online-Funktionen gehen nur in deiner eigenen Version im Netz.';
   if (/script/.test(c)) return 'Keine Internetverbindung (Firebase konnte nicht geladen werden).';
   if (/admin-restricted|operation-not-allowed/.test(c)) return 'In Firebase ist „Anonym“ unter Authentication → Anmeldemethode noch nicht aktiviert.';
@@ -2054,6 +2064,7 @@ function renderCloud(){
   if (SANDBOX) { el.innerHTML = h+'<p>Teilen, Geräte-Sync und Buchclubs funktionieren nur in deiner eigenen Version im Netz (GitHub Pages).</p><div class="actions"><button class="btn primary" data-act="close">OK</button></div>'; return; }
   h += '<div class="dgroup"><h3>Einladungs- oder Sync-Link bekommen?</h3><div class="row2"><input type="text" id="joinLink" placeholder="Link hier einfügen …"><button class="btn primary" data-act="joinlink">Öffnen</button></div><p class="hint">Praktisch in der App vom Home-Bildschirm: Links öffnen sich sonst in Safari.</p></div>';
   if (!cloudMeta.cfg) {
+    h += '<p style="font-size:14px;margin:0 0 14px">Buchclubs, Teilen und Geräte-Sync brauchen einen kostenlosen Online-Speicher. Den richtet nur eine Person einmal ein – alle anderen, die diese Seite nutzen, können danach sofort loslegen.</p>';
     h += '<div class="dgroup"><h3>Einmalige Einrichtung (ca. 10 Minuten, kostenlos)</h3><ol class="steps">'+
       '<li>Öffne <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>, melde dich mit deinem Google-Konto an und klick auf <b>„Projekt erstellen“</b>. Name z. B. <i>buecherregal</i>. Google Analytics kannst du ausschalten.</li>'+
       '<li>Links im Menü: <b>Build → Authentication → Jetzt starten → Anmeldemethode → „Anonym“</b> aktivieren und speichern.</li>'+
@@ -2104,6 +2115,7 @@ function handleLink(hash){
     cloudMeta.cfg=cfg; saveMeta(); CLOUD.ready=null;
   }
   if (!cloudMeta.cfg) { toast('Der Link ist unvollständig.'); return true; }
+  CLOUD.ready = CLOUD.ready || null;
   var go;
   if (p.view) go = openViewOnly(p.view);
   else if (p.club) go = needName().then(function(){ return joinClub(p.club); });
@@ -2112,18 +2124,18 @@ function handleLink(hash){
   return true;
 }
 
-function errToast(e){ if (e && e.message==='cancel') return; toast(e && e.message && !e.code ? e.message : cloudErr(e)); }
+function errToast(e){ if (e && e.message==='cancel') return; var m=e && e.message; toast(m && !e.code && !/^(nocfg|sandbox|script)$/.test(m) ? m : cloudErr(e)); }
 var CLOUD_ACTS = {
-  cloud: function(){ renderCloud(); $('ovCloud').classList.add('open'); $('ovCloud').querySelector('.sheet').scrollTop=0; },
+  cloud: function(){ loadSharedCfg().then(function(){ if ($('ovCloud').classList.contains('open')) renderCloud(); }); renderCloud(); $('ovCloud').classList.add('open'); $('ovCloud').querySelector('.sheet').scrollTop=0; },
   ctxmenu: function(){ renderSwitch(); $('ovSwitch').classList.add('open'); },
   copyrules: function(){ var r=$('rulesTxt'); try { navigator.clipboard.writeText(RULES).then(function(){ toast('Regeln kopiert ✓'); }, function(){ r.select(); toast('Markiert – jetzt kopieren'); }); } catch(e) { r.select(); } },
   cfgsave: function(){ var c=parseCfg($('cfgIn').value); if (!c) { $('cfgErr').textContent='Das sieht nicht nach der Firebase-Konfiguration aus. Kopier den ganzen Block mit apiKey, projectId usw.'; return; } cloudMeta.cfg=c; saveMeta(); CLOUD.ready=null; $('cfgErr').textContent='Verbinde …'; cloudInit().then(function(){ return CLOUD.db.collection('s').doc('test_'+rid(24)).set({type:'test', at:Date.now()}); }).then(function(){ toast('✓ Verbunden!'); renderCloud(); }).catch(function(e){ var m=$('cfgErr'); renderCloud(); setTimeout(function(){ var s=$('cloudStat'); if (s) { s.textContent='⚠ '+cloudErr(e); s.style.color='#a3271b'; } }, 50); }); },
   cfgreset: function(t){ if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent='Wirklich entfernen? (Daten in der Cloud bleiben)'; return; } unsub.forEach(function(u){ try{u();}catch(e){} }); unsub=[]; if (activeClub||viewing) leaveContext(); cloudMeta={client:cloudMeta.client, clubs:[], myName:cloudMeta.myName}; saveMeta(); CLOUD.ready=null; normalize(); refreshAll(); renderCloud(); },
-  synon: function(){ cloudBadge('Schalte Sync ein …'); enableSync().then(function(){ toast('✓ Sync ist an'); renderCloud(); }).catch(errToast); },
-  viewon: function(){ needName().then(createView).then(function(){ renderCloud(); shareLink(linkFor('view', cloudMeta.viewId), 'Mein Bücherregal'); }).catch(errToast); },
+  synon: function(){ needCloud().then(function(){ return enableSync(); }).then(function(){ toast('✓ Sync ist an'); renderCloud(); }).catch(errToast); return; cloudBadge('Schalte Sync ein …'); enableSync().then(function(){ toast('✓ Sync ist an'); renderCloud(); }).catch(errToast); },
+  viewon: function(){ needCloud().then(needName).then(createView).then(function(){ renderCloud(); shareLink(linkFor('view', cloudMeta.viewId), 'Mein Bücherregal'); }).catch(errToast); },
   viewnew: function(){ createView().then(function(){ toast('Neuer Link erstellt – der alte funktioniert nicht mehr'); renderCloud(); }).catch(errToast); },
   viewstop: function(){ stopView().then(function(){ toast('Teilen beendet'); renderCloud(); }).catch(errToast); },
-  clubnew: function(){ needName().then(function(){ return askText('Buchclub gründen','Wie soll euer Buchclub heißen?','','z. B. Lesekränzchen','Gründen'); }).then(function(n){ n=(n||'').trim(); if (!n) throw new Error('cancel'); return createClub(n); }).then(function(){ toast('🎉 Buchclub gegründet – jetzt Freunde einladen!'); }).catch(errToast); },
+  clubnew: function(){ needCloud().then(needName).then(function(){ return askText('Buchclub gründen','Wie soll euer Buchclub heißen?','','z. B. Lesekränzchen','Gründen'); }).then(function(n){ n=(n||'').trim(); if (!n) throw new Error('cancel'); return createClub(n); }).then(function(){ toast('🎉 Buchclub gegründet – jetzt Freunde einladen!'); }).catch(errToast); },
   clubinvite: function(){ shareLink(linkFor('club', activeClub), 'Komm in unseren Buchclub!'); },
   clubleave: function(t){ if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent='Wirklich verlassen?'; return; } leaveClub(activeClub); toast('Buchclub verlassen'); },
   joinlink: function(){ var v=($('joinLink')||{}).value||''; var i=v.indexOf('#'); if (i<0 || !handleLink(v.slice(i))) { toast('Das ist kein gültiger Link.'); return; } $('ovCloud').classList.remove('open'); },
@@ -2345,10 +2357,10 @@ idbGet('state').then(function(str){
   if (SANDBOX) return;
   var h = location.hash;
   if (h && /(club|view|sync)=/.test(h)) { try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} if (handleLink(h)) return; }
-  if (cloudMeta.cfg) {
+  loadSharedCfg().then(function(){ if (!cloudMeta.cfg) return;
     if (cloudMeta.syncKey) listenPersonal();
     if (cloudMeta.active && clubEntry(cloudMeta.active)) switchTo(cloudMeta.active).catch(function(e){ cloudMeta.active=''; saveMeta(); toast(cloudErr(e)); });
-  }
+  });
 });
 try {
   var ui = JSON.parse(sessionStorage.getItem(LS+'-ui'));
