@@ -457,6 +457,16 @@ body.readonly .plaque[data-rename]:hover .pname{text-decoration:none}
 body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
 @media (max-width:720px){.clubgrid{grid-template-columns:1fr}.meet{grid-template-columns:1fr}.vote{grid-template-columns:minmax(0,1fr) 40px 18px auto}#ctxBanner,#clubPanel{padding:0 12px}}
 .meet input{min-width:0}
+
+#ovShelfScan{z-index:62}
+.sslist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
+.ssrow{display:grid;grid-template-columns:22px 34px 1fr;gap:10px;align-items:center;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:6px 10px}
+.ssrow.off{opacity:.5}
+.ssrow input[type=checkbox]{width:18px;height:18px;accent-color:#2a2420}
+.ssrow .mini{width:34px;height:50px;border-radius:2px;background-size:cover;background-position:center;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+.ssinfo input{width:100%;font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;padding:2px 0;border-bottom:1px dashed transparent}
+.ssinfo input:focus{outline:none;border-bottom-color:#b5523b}
+.ssinfo small{display:block;color:#6f655c;font-size:12px}
 </style>
 </head>
 <body>
@@ -580,6 +590,7 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
       <div class="lookup">
         <div class="row online-only">
           <button type="button" class="btn primary" data-act="scan">📷 Barcode scannen</button>
+          <button type="button" class="btn" data-act="shelfscan">📚 Regal-Foto</button>
           <input type="text" id="lk-q" placeholder="oder ISBN / Titel eintippen" inputmode="search" enterkeyhint="search">
           <button type="button" class="btn" data-act="lookup">Suchen</button>
         </div>
@@ -627,6 +638,7 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
       <div class="scanframe"><video id="scanVideo" playsinline muted autoplay></video></div>
       <div class="lk-status" id="scanStatus">Halte den Strichcode auf der Buchrückseite in den Rahmen.</div>
       <div class="actions" style="justify-content:center"><span class="filebtn btn">🖼 Foto vom Barcode<input type="file" accept="image/*" id="scanFile"></span><button class="btn" data-act="stopscan">Ohne Scan eingeben</button></div>
+      <button class="btn online-only" data-act="shelfscan" style="margin-top:4px">📚 Ganzes Regal fotografieren (mehrere Bücher)</button>
     </div>
   </div>
 </div>
@@ -646,6 +658,13 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
       <div class="dgroup"><h3>Exportieren</h3><p class="hint" style="margin-top:0">Alle Änderungen werden automatisch auf diesem Gerät gespeichert. Eine Sicherungsdatei brauchst du nur als Notfall-Kopie oder um dein Regal auf ein anderes Gerät zu bringen. Am iPhone wählst du nach dem Tippen „In Dateien sichern“ → iCloud Drive.</p><textarea class="backup" id="bkOut" readonly></textarea><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" data-act="copybk">Kopieren</button><button class="btn online-only" data-act="dlbk">💾 Als Datei sichern (iCloud)</button><span class="hint" id="bkCopied"></span></div></div>
       <div class="dgroup"><h3>Importieren</h3><textarea class="backup" id="bkIn" placeholder="Gesicherten Text hier einfügen…"></textarea><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="filebtn btn">Datei laden<input type="file" accept=".json,application/json,text/plain" id="bkFile"></span><button class="btn danger" data-act="importbk">Regal ersetzen</button><span class="err" id="bkErr"></span></div></div>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovShelfScan" data-overlay>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Regal-Foto scannen" style="max-width:640px">
+    <button class="close" data-act="close" aria-label="Schließen">×</button>
+    <div class="designer"><h2>📚 Mehrere Bücher per Foto</h2><div id="ssBody"></div><div id="ssFoot" class="actions" style="margin-top:16px;align-items:flex-end"></div></div>
   </div>
 </div>
 
@@ -858,7 +877,7 @@ function flushSave(){ if (designDirty && !(artifactApi && canPublish)) { designD
 setInterval(function(){ if (!drag) flushSave(); }, 1200);
 document.addEventListener('visibilitychange', function(){ if (document.visibilityState==='hidden') flushSave(); });
 window.addEventListener('pagehide', flushSave);
-function busy(){ return drag || ['ovEdit','ovDesign','ovBackup','ovScan','ovDeco','ovStats'].some(function(id){ return $(id).classList.contains('open'); }); }
+function busy(){ return drag || ['ovShelfScan','ovEdit','ovDesign','ovBackup','ovScan','ovDeco','ovStats'].some(function(id){ return $(id).classList.contains('open'); }); }
 function doPublish(){
   if (busy()) { saveTimer = setTimeout(doPublish, 1500); return; }
   try { sessionStorage.setItem(LS+'-ui', JSON.stringify({open: viewId, flipped: flipped, scroll: window.scrollY, zoom: zoomKey, live: liveOn})); } catch(e) {}
@@ -1145,10 +1164,25 @@ function cleanIsbn(s){ return String(s||'').replace(/[^0-9Xx]/g,'').toUpperCase(
 function isIsbn(s){ return /^(97[89]\d{10}|\d{9}[\dX])$/.test(s); }
 function isbn10to13(s){ if(s.length!==10) return s; var b='978'+s.slice(0,9), sum=0; for(var i=0;i<12;i++) sum+=(+b[i])*(i%2?3:1); return b+((10-sum%10)%10); }
 function getJSON(url){ return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+/* Google Books: erst mit dem Schlüssel des eigenen Firebase-Projekts (eigenes Kontingent), sonst ohne */
+function gbooks(path){
+  var base='https://www.googleapis.com/books/v1/'+path, key=(typeof cloudMeta!=='undefined' && cloudMeta.cfg && cloudMeta.cfg.apiKey) || '';
+  var p = (typeof loadSharedCfg==='function' ? loadSharedCfg() : Promise.resolve()).then(function(){ key=(cloudMeta.cfg && cloudMeta.cfg.apiKey)||''; });
+  return p.then(function(){ return key ? getJSON(base+(base.indexOf('?')>0?'&':'?')+'key='+encodeURIComponent(key)).catch(function(){ return getJSON(base); }) : getJSON(base); });
+}
+function isbn13to10(s){ if (!/^978\d{10}$/.test(s)) return ''; var b=s.slice(3,12), sum=0; for (var i=0;i<9;i++) sum+=(10-i)*(+b[i]); var c=(11-sum%11)%11; return b+(c===10?'X':c); }
+function coverCandidates(isbn, g){
+  var i10=isbn13to10(isbn), list=[];
+  if (i10) list.push('https://images-na.ssl-images-amazon.com/images/P/'+i10+'.01.LZZZZZZZ.jpg');
+  list.push('https://books.google.com/books/content?vid=ISBN'+isbn+'&printsec=frontcover&img=1&zoom=0');
+  list.push(gbCover(g));
+  list.push('https://covers.openlibrary.org/b/isbn/'+isbn+'-L.jpg?default=false');
+  return list;
+}
 function stripTags(s){ var d=document.createElement('div'); d.innerHTML=String(s||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/p>/gi,'\n\n'); return (d.textContent||'').replace(/\n{3,}/g,'\n\n').trim(); }
 function lkStatus(t){ $('lk-status').textContent=t; }
-function testImg(url){ return new Promise(function(res){ var i=new Image(), done=false; var t=setTimeout(function(){ if(!done){done=true;res(null);} }, 9000); i.onload=function(){ if(done) return; done=true; clearTimeout(t); res(i.naturalWidth>=60 && i.naturalHeight>=80 ? url : null); }; i.onerror=function(){ if(done) return; done=true; clearTimeout(t); res(null); }; i.src=url; }); }
-function gbCover(v){ var l=v && v.imageLinks; if(!l) return null; var u=l.extraLarge||l.large||l.medium||l.thumbnail||l.smallThumbnail; return u ? u.replace(/^http:/,'https:').replace('&edge=curl','') : null; }
+function testImg(url){ return new Promise(function(res){ var i=new Image(), done=false; var t=setTimeout(function(){ if(!done){done=true;res(null);} }, 9000); i.onload=function(){ if(done) return; done=true; clearTimeout(t); var w=i.naturalWidth, h=i.naturalHeight; res(w>=100 && h>=140 && !(w===128 && h===178) && !(/books\.google/.test(url) && w<250) ? url : null); }; i.onerror=function(){ if(done) return; done=true; clearTimeout(t); res(null); }; i.src=url; }); }
+function gbCover(v){ var l=v && v.imageLinks; if(!l) return null; var u=l.extraLarge||l.large||l.medium||l.thumbnail||l.smallThumbnail; return u ? u.replace(/^http:/,'https:').replace('&edge=curl','').replace(/zoom=\d/,'zoom=0') : null; }
 function fixName(n){ n=(n||'').trim(); var m=n.match(/^([^,]+),\s*(.+)$/); return m ? m[2]+' '+m[1] : n; }
 function dnbLookup(isbn){
   return fetch('https://services.dnb.de/sru/dnb?version=1.1&operation=searchRetrieve&recordSchema=MARC21-xml&maximumRecords=1&query=num%3D'+isbn).then(function(r){ return r.ok ? r.text() : null; }).then(function(x){
@@ -1197,30 +1231,31 @@ function lookupIsbn(raw){
   if (!isIsbn(isbn)) { lkStatus('Das ist keine gültige ISBN.'); return; }
   $('lk-q').value = isbn; $('lk-results').innerHTML=''; $('lk-cands').innerHTML=''; lkStatus('Suche Buch mit ISBN '+isbn+' …');
   var dup = state.books.filter(function(b){ return b.isbn===isbn && (!draft || b.id!==draft.id); })[0];
-  var gb = getJSON('https://www.googleapis.com/books/v1/volumes?q=isbn:'+isbn).then(function(d){
+  var gb = gbooks('volumes?q=isbn:'+isbn).then(function(d){
     var it = d.items && d.items[0]; if (!it) return null;
     var v = it.volumeInfo || {};
     if (v.description) return v;
-    return getJSON('https://www.googleapis.com/books/v1/volumes/'+it.id).then(function(f){ return Object.assign({}, v, f.volumeInfo||{}); }).catch(function(){ return v; });
+    return gbooks('volumes/'+it.id).then(function(f){ return Object.assign({}, v, f.volumeInfo||{}); }).catch(function(){ return v; });
   }).catch(function(){ return null; });
   var ol = getJSON('https://openlibrary.org/api/books?bibkeys=ISBN:'+isbn+'&format=json&jscmd=data').then(function(d){ return d['ISBN:'+isbn] || null; }).catch(function(){ return null; });
   var dn = dnbLookup(isbn);
-  Promise.all([gb, ol, dn]).then(function(r){
-    var g=r[0]||{}, o=r[1]||{}, d=r[2]||{};
+  var olw = getJSON('https://openlibrary.org/search.json?isbn='+isbn+'&fields=key').then(function(d){ var k=d.docs&&d.docs[0]&&d.docs[0].key; return k ? getJSON('https://openlibrary.org'+k+'.json') : null; }).then(function(w){ var de=w&&w.description; return de ? (typeof de==='string'?de:de.value) : ''; }).catch(function(){ return ''; });
+  Promise.all([gb, ol, dn, olw]).then(function(r){
+    var g=r[0]||{}, o=r[1]||{}, d=r[2]||{}, owd=r[3]||'';
     if (r[0]||r[1]||r[2]) {
-      fillFrom({ title: d.title || g.title || o.title, author: d.author || (g.authors||[]).join(', ') || (o.authors||[]).map(function(a){return a.name;}).join(', '), pages: g.pageCount || d.pages || o.number_of_pages, blurb: stripTags(g.description || (o.excerpts && o.excerpts[0] && o.excerpts[0].text) || ''), isbn: isbn });
-      lkStatus((dup ? '⚠ Dieses Buch steht schon in deinem Regal. ' : '✓ Gefunden! ') + 'Prüf kurz die Angaben – und dann Speichern.' + (g.description ? '' : ' (Kein Klappentext gefunden.)'));
+      fillFrom({ title: d.title || g.title || o.title, author: d.author || (g.authors||[]).join(', ') || (o.authors||[]).map(function(a){return a.name;}).join(', '), pages: g.pageCount || d.pages || o.number_of_pages, blurb: stripTags(g.description || owd || (o.excerpts && o.excerpts[0] && o.excerpts[0].text) || ''), isbn: isbn });
+      lkStatus((dup ? '⚠ Dieses Buch steht schon in deinem Regal. ' : '✓ Gefunden! ') + 'Prüf kurz die Angaben – und dann Speichern.' + ((g.description||owd) ? '' : ' (Kein Klappentext gefunden – du kannst ihn selbst eintragen.)'));
     } else {
       if (draft) draft.isbn = isbn;
       lkStatus('Zu dieser ISBN habe ich keine Buchdaten gefunden. Gib Titel & Autor:in bitte selbst ein – ich suche trotzdem ein Cover.');
     }
-    return showCovers(['https://portal.dnb.de/opac/mvb/cover?isbn='+isbn, 'https://covers.openlibrary.org/b/isbn/'+isbn+'-L.jpg?default=false', gbCover(g)]).then(function(n){ if(!n && draft) lkStatus($('lk-status').textContent+' Kein Cover gefunden – lad eins hoch oder füg eins ein.'); });
+    return showCovers(coverCandidates(isbn, g)).then(function(n){ if(!n && draft) lkStatus($('lk-status').textContent+' Kein Cover gefunden – lad eins hoch oder füg eins ein.'); });
   });
 }
 var lastResults=[];
 function searchTitle(q){
   lkStatus('Suche „'+q+'“ …'); $('lk-cands').innerHTML='';
-  getJSON('https://www.googleapis.com/books/v1/volumes?maxResults=8&q='+encodeURIComponent(q)).then(function(d){
+  gbooks('volumes?maxResults=8&q='+encodeURIComponent(q)).then(function(d){
     lastResults = (d.items||[]).map(function(it){ return it.volumeInfo||{}; });
     if (!lastResults.length) { lkStatus('Nichts gefunden. Probier es mit Titel und Autor:in.'); $('lk-results').innerHTML=''; return; }
     lkStatus('Welches Buch meinst du?');
@@ -1234,7 +1269,7 @@ function chooseResult(i){
   var isbn = id13 ? id13.identifier : (id10 ? isbn10to13(id10.identifier) : '');
   if (isbn) { lookupIsbn(isbn); return; }
   fillFrom({ title:v.title, author:(v.authors||[]).join(', '), pages:v.pageCount, blurb:stripTags(v.description||'') });
-  lkStatus('✓ Übernommen.'); showCovers([gbCover(v)]);
+  lkStatus('✓ Übernommen.'); showCovers([gbCover(v) && gbCover(v).replace(/zoom=\d/,'zoom=0'), gbCover(v)]);
 }
 function doLookup(){
   var q=$('lk-q').value.trim(); if(!q) { $('lk-q').focus(); return; }
@@ -2125,6 +2160,97 @@ function handleLink(hash){
   return true;
 }
 
+/* ---------- 📚 Regal-Foto: mehrere Bücher auf einmal erkennen (Gemini über Firebase AI Logic, Gratis-Tarif) ---------- */
+var AI_VER='12.2.1', aiModelP=null, scanFound=[];
+function getAiModel(){
+  if (aiModelP) return aiModelP;
+  aiModelP = loadSharedCfg().then(function(ok){
+    if (!ok || !cloudMeta.cfg) throw new Error('nocfg');
+    var b='https://www.gstatic.com/firebasejs/'+AI_VER+'/';
+    return Promise.all([import(b+'firebase-app.js'), import(b+'firebase-ai.js')]);
+  }).then(function(m){
+    var appMod=m[0], ai=m[1], app;
+    try { app = appMod.getApp('ai'); } catch(e) { app = appMod.initializeApp(cloudMeta.cfg, 'ai'); }
+    var inst = ai.getAI(app, {backend: new ai.GoogleAIBackend()});
+    return {ai:ai, inst:inst};
+  });
+  aiModelP.catch(function(){ aiModelP=null; });
+  return aiModelP;
+}
+var AI_MODELS=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'];
+function recognizeSpines(dataUrl){
+  var b64=dataUrl.split(',')[1];
+  var prompt='Auf diesem Foto stehen Bücher in einem Regal (meist sieht man nur die Buchrücken). Lies jeden erkennbaren Buchrücken von links nach rechts und von oben nach unten. Gib NUR ein JSON-Array zurück, ein Objekt pro Buch: {"title": "...", "author": "..."} (author leer lassen, wenn nicht lesbar). Keine Duplikate, keine Erklärungen. Wenn ein Titel nur teilweise lesbar ist, gib den lesbaren Teil an.';
+  return getAiModel().then(function(r){
+    var i=0;
+    function attempt(){
+      var model = r.ai.getGenerativeModel(r.inst, {model:AI_MODELS[i], generationConfig:{responseMimeType:'application/json', temperature:0.1}});
+      return model.generateContent([prompt, {inlineData:{data:b64, mimeType:'image/jpeg'}}]).then(function(res){
+        var t = res.response.text(); var m = t.match(/\[[\s\S]*\]/); var arr = JSON.parse(m ? m[0] : t);
+        return (Array.isArray(arr)?arr:[]).filter(function(x){ return x && x.title; }).map(function(x){ return {title:String(x.title).trim(), author:String(x.author||'').trim()}; });
+      }).catch(function(e){ if (++i < AI_MODELS.length && !/quota|429|permission|PERMISSION|API_NOT|not been used|disabled/i.test(String(e && e.message))) return attempt(); throw e; });
+    }
+    return attempt();
+  });
+}
+function aiErr(e){
+  var m=String((e && (e.code||e.message))||e);
+  if (/nocfg/.test(m)) return 'Dafür muss die Online-Verbindung eingerichtet sein (☁️ Teilen).';
+  if (/quota|429|RESOURCE_EXHAUSTED/i.test(m)) return 'Das kostenlose Tageskontingent der Bilderkennung ist aufgebraucht – morgen geht es wieder.';
+  if (/not been used|disabled|API_NOT|firebasevertexai|firebaseml|AI Logic/i.test(m)) return 'Die Bilderkennung ist in Firebase noch nicht eingeschaltet (AI Logic).';
+  if (/Failed to fetch|network|import/i.test(m)) return 'Keine Internetverbindung.';
+  return 'Die Erkennung hat nicht geklappt: '+m.slice(0,140);
+}
+function enrichFound(x){
+  var q='intitle:'+x.title+(x.author?'+inauthor:'+x.author:'');
+  return gbooks('volumes?maxResults=1&q='+encodeURIComponent(q)).then(function(d){
+    var v = d.items && d.items[0] && d.items[0].volumeInfo; if (!v) return x;
+    var ids=v.industryIdentifiers||[], i13=ids.filter(function(y){return y.type==='ISBN_13';})[0], i10=ids.filter(function(y){return y.type==='ISBN_10';})[0];
+    x.isbn = i13 ? i13.identifier : (i10 ? isbn10to13(i10.identifier) : '');
+    x.ftitle = v.title || x.title; x.fauthor = (v.authors||[]).join(', ') || x.author;
+    x.pages = v.pageCount || ''; x.blurb = stripTags(v.description||''); x.g=v;
+    return showCoversQuiet(x.isbn ? coverCandidates(x.isbn, v) : [gbCover(v)]).then(function(u){ x.cover=u||''; return x; });
+  }).catch(function(){ return x; });
+}
+function showCoversQuiet(urls){ urls=urls.filter(Boolean); var i=0; function next(){ if (i>=urls.length) return Promise.resolve(''); return testImg(urls[i++]).then(function(ok){ return ok || next(); }); } return next(); }
+function openShelfScan(){
+  scanFound=[];
+  $('ssBody').innerHTML='<p style="font-size:14px;margin:0 0 12px">Fotografiere dein Regal so, dass die <b>Buchrücken gut lesbar</b> sind (am besten ein Regalbrett pro Foto, gerade von vorne, ohne Spiegelungen). Die App erkennt die Titel und sucht Cover, Seitenzahl und Klappentext dazu.</p><label class="filebtn btn primary">📷 Foto aufnehmen oder wählen<input type="file" accept="image/*" id="ssFile"></label><p class="hint" style="margin-top:12px">Das Foto wird zur Erkennung an Google (Gemini) geschickt und nicht gespeichert.</p>';
+  $('ssFoot').innerHTML='';
+  $('ovShelfScan').classList.add('open');
+}
+function runShelfScan(file){
+  $('ssBody').innerHTML='<p style="font-size:15px">🔍 Lese die Buchrücken … das dauert ein paar Sekunden.</p>';
+  storeImage(file, 1600).then(function(r){ return recognizeSpines(r.url); }).then(function(list){
+    if (!list.length) { $('ssBody').innerHTML='<p>Auf dem Foto habe ich keine Buchtitel erkannt. Probier ein schärferes Foto, näher dran.</p><label class="filebtn btn">Neues Foto<input type="file" accept="image/*" id="ssFile"></label>'; return; }
+    scanFound = list.slice(0,40).map(function(x){ x.on=true; x.state='…'; return x; });
+    renderShelfScan();
+    var idx=0; function worker(){ if (idx>=scanFound.length) return Promise.resolve(); var x=scanFound[idx++]; return enrichFound(x).then(function(){ x.state = x.isbn ? 'ok' : 'nf'; renderShelfScan(); return worker(); }); }
+    return Promise.all([worker(), worker(), worker()]);
+  }).catch(function(e){ $('ssBody').innerHTML='<p style="color:#a3271b">'+esc(aiErr(e))+'</p><label class="filebtn btn">Nochmal versuchen<input type="file" accept="image/*" id="ssFile"></label>'; });
+}
+function renderShelfScan(){
+  var n=scanFound.filter(function(x){return x.on;}).length;
+  $('ssBody').innerHTML='<p style="margin:0 0 10px;font-size:14px"><b>'+scanFound.length+' Bücher erkannt.</b> Hak ab, welche ins Regal sollen. Titel kannst du noch korrigieren.</p><div class="sslist">'+scanFound.map(function(x,i){
+    return '<div class="ssrow'+(x.on?'':' off')+'"><input type="checkbox" data-ss="'+i+'"'+(x.on?' checked':'')+' aria-label="Übernehmen"><span class="mini" style="'+(x.cover?'background-image:url(&quot;'+esc(x.cover)+'&quot;)':'background:#d8cfc3')+'"></span><div class="ssinfo"><input type="text" data-sst="'+i+'" value="'+esc(x.ftitle||x.title)+'"><small>'+esc(x.fauthor||x.author||'')+(x.state==='…'?' · suche Infos …':(x.state==='nf'?' · keine Buchdaten gefunden':(x.pages?' · '+x.pages+' S.':'')+(x.blurb?' · mit Klappentext':'')))+'</small></div></div>';
+  }).join('')+'</div>';
+  var sh={}; shelfKeys().filter(function(k){ return customById(k); }).forEach(function(k){ sh[k]=shelfName(k); });
+  $('ssFoot').innerHTML='<label class="f" style="flex:1 1 160px">Status<select id="ssStatus" class="sel"><option value="read">Gelesen</option><option value="want">Will ich lesen</option><option value="reading">Lese ich gerade</option></select></label>'+
+    (Object.keys(sh).length?'<label class="f" style="flex:1 1 160px">Regal<select id="ssShelf" class="sel"><option value="">Automatisch</option>'+Object.keys(sh).map(function(k){ return '<option value="'+esc(k)+'">'+esc(sh[k])+'</option>'; }).join('')+'</select></label>':'')+
+    '<button class="btn primary" data-act="ssadd">'+n+' '+(n===1?'Buch':'Bücher')+' hinzufügen</button>';
+}
+function addScanned(){
+  var st=($('ssStatus')||{}).value||'read', shelf=($('ssShelf')||{}).value||'', added=0;
+  scanFound.filter(function(x){ return x.on; }).forEach(function(x){
+    var b={id:uid(), title:x.ftitle||x.title, author:x.fauthor||x.author||'', status:st, pages:x.pages||'', color:SPINE_COLORS[Math.floor(Math.random()*SPINE_COLORS.length)], tcol:'', style:'plain', font:'', size:'m', cover:x.cover||'', back:'', blurb:x.blurb||'', notes:'', rating:0, date:'', started:'', added:Date.now()+added, isbn:x.isbn||'', shelf:shelf, level:0};
+    if (st==='read') b.date=today(); if (st==='reading') b.started=today();
+    if (state.settings.sort==='manual') b.ord = nextOrd(bookShelf(b), 0)+added;
+    state.books.push(b); added++;
+  });
+  $('ovShelfScan').classList.remove('open'); scanFound=[];
+  refreshAll(); persist(); toast('📚 '+added+' Bücher hinzugefügt');
+}
+
 function errToast(e){ if (e && e.message==='cancel') return; var m=e && e.message; toast(m && !e.code && !/^(nocfg|sandbox|script)$/.test(m) ? m : cloudErr(e)); }
 var CLOUD_ACTS = {
   cloud: function(){ loadSharedCfg().then(function(){ if ($('ovCloud').classList.contains('open')) renderCloud(); }); renderCloud(); $('ovCloud').classList.add('open'); $('ovCloud').querySelector('.sheet').scrollTop=0; },
@@ -2162,7 +2288,7 @@ function refreshAll(){
 }
 function closeTop(){
   hidePill();
-  var order=['ovAsk','ovScan','ovPic','ovDeco','ovEdit','ovView','ovSwitch','ovCloud','ovStats','ovBackup','ovDesign','ovShelf'];
+  var order=['ovAsk','ovShelfScan','ovScan','ovPic','ovDeco','ovEdit','ovView','ovSwitch','ovCloud','ovStats','ovBackup','ovDesign','ovShelf'];
   if ($('ovAsk').classList.contains('open')) { askDone(null); return; }
   for (var i=0;i<order.length;i++){
     var id=order[i]; if (!$(id).classList.contains('open')) continue;
@@ -2227,6 +2353,8 @@ document.addEventListener('click', function(e){
   if (a==='stopscan') { stopScan(); setTimeout(function(){ if (draft && !draft.title) $('f-title').focus(); }, 50); return; }
   if (a==='add') { openEdit(null); if (!SANDBOX) scanIntoEditor(); else setTimeout(function(){ $('f-title').focus(); }, 50); return; }
   if (a==='scan') { scanIntoEditor(); return; }
+  if (a==='shelfscan') { $('ovEdit').classList.remove('open'); draft=null; if (scanning||scanStream) stopScan(); openShelfScan(); return; }
+  if (a==='ssadd') { addScanned(); return; }
   if (a==='lookup') { doLookup(); return; }
   if (a==='savenext') { saveDraft(true); return; }
   if (a==='stats') { renderStats(); $('ovStats').classList.add('open'); $('ovStats').querySelector('.sheet').scrollTop=0; return; }
@@ -2292,6 +2420,9 @@ document.addEventListener('change', function(e){
   if (t.id==='upFront') { handleUpload(t.files[0],'cover'); t.value=''; return; }
   if (t.id==='upBack') { handleUpload(t.files[0],'back'); t.value=''; return; }
   if (t.id==='scanFile') { scanImageFile(t.files[0]); t.value=''; return; }
+  if (t.id==='ssFile') { var sf=t.files&&t.files[0]; t.value=''; if (sf) runShelfScan(sf); return; }
+  if (t.dataset && t.dataset.ss!==undefined) { var sx=scanFound[+t.dataset.ss]; if (sx) { sx.on=t.checked; renderShelfScan(); } return; }
+  if (t.dataset && t.dataset.sst!==undefined) { var sy=scanFound[+t.dataset.sst]; if (sy) { sy.ftitle=t.value.trim(); } return; }
   if (t.id==='botmWhen') { setBotm({when:t.value}); return; }
   if (t.id==='botmWhere') { setBotm({where:t.value.trim()}); return; }
   if (t.id==='myName' && activeClub && CLOUD.uid) { CLOUD.db.collection('s').doc(activeClub).collection('members').doc(CLOUD.uid).set({name:myName()},{merge:true}); return; }
