@@ -2203,10 +2203,25 @@ function aiErr(e){
   if (/Failed to fetch|network|import/i.test(m)) return 'Keine Internetverbindung.';
   return 'Die Erkennung hat nicht geklappt: '+m.slice(0,140);
 }
+function pickEdition(items, x, sur){
+  var low=function(t){ return String(t||'').toLowerCase(); }, T=low(x.title), S=low(sur), best=null, bs=-1e9;
+  items.forEach(function(it){
+    var v=it.volumeInfo||{}, au=low((v.authors||[]).join(' ')), ti=low(v.title), sc=0;
+    if (S && au.indexOf(S)>=0) sc+=10; else if (S) sc-=6;
+    if (ti===T) sc+=4; else if (ti.indexOf(T)===0) sc+=2;
+    if (/lektüre|interpretation|erläuterung|schlüssel|analyse|unterricht|arbeitsheft|lösung|kopiervorlage|klausur|abitur|study guide|summary/.test(low(v.title+' '+(v.subtitle||'')))) sc-=12;
+    if ((v.industryIdentifiers||[]).some(function(y){ return /ISBN/.test(y.type); })) sc+=2;
+    if (v.imageLinks) sc+=2; if (v.description) sc+=1; if ((v.pageCount||0)>100) sc+=1;
+    if (v.language==='de') sc+=1;
+    if (sc>bs) { bs=sc; best=v; }
+  });
+  return best;
+}
 function enrichFound(x){
-  var q='intitle:'+x.title+(x.author?'+inauthor:'+x.author:'');
-  return gbooks('volumes?maxResults=1&q='+encodeURIComponent(q)).then(function(d){
-    var v = d.items && d.items[0] && d.items[0].volumeInfo; if (!v) return x;
+  var sur=(x.author||'').split(/[ ,.]+/).filter(function(w){ return w.length>2; }).pop()||'';
+  var q='intitle:'+x.title+(sur?'+inauthor:'+sur:'');
+  return gbooks('volumes?maxResults=15&q='+encodeURIComponent(q)).then(function(d){
+    var v = pickEdition(d.items||[], x, sur); if (!v) return x;
     var ids=v.industryIdentifiers||[], i13=ids.filter(function(y){return y.type==='ISBN_13';})[0], i10=ids.filter(function(y){return y.type==='ISBN_10';})[0];
     x.isbn = i13 ? i13.identifier : (i10 ? isbn10to13(i10.identifier) : '');
     x.ftitle = v.title || x.title; x.fauthor = (v.authors||[]).join(', ') || x.author;
