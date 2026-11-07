@@ -2167,10 +2167,14 @@ function getAiModel(){
   aiModelP = loadSharedCfg().then(function(ok){
     if (!ok || !cloudMeta.cfg) throw new Error('nocfg');
     var b='https://www.gstatic.com/firebasejs/'+AI_VER+'/';
-    return Promise.all([import(b+'firebase-app.js'), import(b+'firebase-ai.js')]);
+    return Promise.all([import(b+'firebase-app.js'), import(b+'firebase-ai.js'), import(b+'firebase-app-check.js')]);
   }).then(function(m){
     var appMod=m[0], ai=m[1], app;
-    try { app = appMod.getApp('ai'); } catch(e) { app = appMod.initializeApp(cloudMeta.cfg, 'ai'); }
+    try { app = appMod.getApp('ai'); } catch(e) {
+      app = appMod.initializeApp(cloudMeta.cfg, 'ai');
+      /* Missbrauchsschutz: nur Anfragen von dieser Website werden angenommen */
+      try { m[2].initializeAppCheck(app, {provider: new m[2].ReCaptchaEnterpriseProvider(cloudMeta.cfg.recaptchaKey || '6Led1hQuAAAAAIzBSVj4l_-xR7sCTX3HcbhTj2KM'), isTokenAutoRefreshEnabled: true}); } catch(e2) {}
+    }
     var inst = ai.getAI(app, {backend: new ai.GoogleAIBackend()});
     return {ai:ai, inst:inst};
   });
@@ -2195,8 +2199,9 @@ function recognizeSpines(dataUrl){
   });
 }
 function aiErr(e){
-  var m=String((e && (e.code||e.message))||e);
+  var m=String((e && (e.message||e.code))||e);
   if (/nocfg/.test(m)) return 'Dafür muss die Online-Verbindung eingerichtet sein (☁️ Teilen).';
+  if (/App Check|appCheck/i.test(m)) return 'Der Schutz der Bilderkennung konnte dich nicht bestätigen – lade die Seite neu und probier es nochmal.';
   if (/quota|429|RESOURCE_EXHAUSTED/i.test(m)) return 'Das kostenlose Tageskontingent der Bilderkennung ist aufgebraucht – morgen geht es wieder.';
   if (/not been used|disabled|API_NOT|firebasevertexai|firebaseml|AI Logic/i.test(m)) return 'Die Bilderkennung ist in Firebase noch nicht eingeschaltet (AI Logic).';
   if (/timeout/.test(m)) return 'Die Bilderkennung antwortet gerade nicht – probier es gleich nochmal.';
