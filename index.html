@@ -473,6 +473,10 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
 .up .thumb.spinethumb{width:22px;aspect-ratio:auto;height:93px;background-size:100% 100%}
 .uploads{grid-template-columns:1fr 1fr 1fr}
 @media (max-width:820px){.uploads{grid-template-columns:1fr}}
+
+.ssimgs{display:flex;gap:3px;align-items:center}
+.ssspine{width:12px;height:50px;border-radius:1px;background-size:100% 100%;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+.ssrow{grid-template-columns:22px auto 1fr}
 </style>
 </head>
 <body>
@@ -2316,14 +2320,14 @@ var AI_MODELS=['gemini-flash-lite-latest','gemini-flash-latest','gemini-3.8-flas
 function withTimeout(p, ms){ return Promise.race([p, new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, ms); })]); }
 function recognizeSpines(dataUrl){
   var b64=dataUrl.split(',')[1];
-  var prompt='Auf diesem Foto stehen Bücher in einem Regal (meist sieht man nur die Buchrücken). Lies jeden erkennbaren Buchrücken von links nach rechts und von oben nach unten. Gib NUR ein JSON-Array zurück, ein Objekt pro Buch: {"title": "...", "author": "..."} (author leer lassen, wenn nicht lesbar). Keine Duplikate, keine Erklärungen. Wenn ein Titel nur teilweise lesbar ist, gib den lesbaren Teil an.';
+  var prompt='Auf diesem Foto stehen Bücher in einem Regal (meist sieht man nur die Buchrücken). Lies jeden erkennbaren Buchrücken von links nach rechts und von oben nach unten. Gib NUR ein JSON-Array zurück, ein Objekt pro Buch: {"title": "...", "author": "...", "box": [ymin,xmin,ymax,xmax], "read": "up|down|right|left", "lang": "de|en|…"} (author leer lassen, wenn nicht lesbar). box = genauer Umriss NUR dieses einen Buchrückens, Werte 0 bis 1000. read = in welche Richtung im Bild die Titelschrift auf dem Rücken läuft (Leserichtung). lang = Sprache des Titels. Keine Duplikate, keine Erklärungen. Wenn ein Titel nur teilweise lesbar ist, gib den lesbaren Teil an.';
   return getAiModel().then(function(r){
     var i=0;
     function attempt(){
       var model = r.ai.getGenerativeModel(r.inst, {model:AI_MODELS[i], generationConfig:{responseMimeType:'application/json', temperature:0.1}});
       return withTimeout(model.generateContent([prompt, {inlineData:{data:b64, mimeType:'image/jpeg'}}]), 45000).then(function(res){
         var t = res.response.text(); var m = t.match(/\[[\s\S]*\]/); var arr = JSON.parse(m ? m[0] : t);
-        return (Array.isArray(arr)?arr:[]).filter(function(x){ return x && x.title; }).map(function(x){ return {title:String(x.title).trim(), author:String(x.author||'').trim()}; });
+        return (Array.isArray(arr)?arr:[]).filter(function(x){ return x && x.title; }).map(function(x){ return {title:String(x.title).trim(), author:String(x.author||'').trim(), box:x.box, read:x.read, lang:x.lang}; });
       }).catch(function(e){ if (++i < AI_MODELS.length && !/quota|429|permission|PERMISSION|API_NOT|not been used|disabled/i.test(String(e && e.message))) return attempt(); throw e; });
     }
     return attempt();
@@ -2391,6 +2395,19 @@ function enrichFound(x){
   }).catch(function(){ return x; });
 }
 function showCoversQuiet(urls){ urls=urls.filter(Boolean); var i=0; function next(){ if (i>=urls.length) return Promise.resolve(''); return testImg(urls[i++]).then(function(ok){ return ok || next(); }); } return next(); }
+/* Buchrücken aus dem Regalfoto ausschneiden und aufrecht stellen (Deutsch: Schrift von unten nach oben) */
+function cutSpine(cv, x){
+  if (!cv || !Array.isArray(x.box) || x.box.length!==4 || typeof cropRotate!=='function') return '';
+  var b=x.box.map(Number); if (!b.every(function(v){ return isFinite(v); }) || b[2]<=b[0] || b[3]<=b[1]) return '';
+  var A={right:0,down:90,left:180,up:270}, rd = (x.read in A) ? ((/^en/i.test(x.lang||'') ? 90 : 270) - A[x.read] + 360) % 360 : null;
+  var w=(b[3]-b[1])*cv.width, h=(b[2]-b[0])*cv.height;
+  if (rd===null) rd = w > h ? 270 : 0;
+  try {
+    var c=cropRotate(cv, [b[0]+4,b[1]+4,b[2]-4,b[3]-4], null, 700, rd);
+    if (c.width > c.height*0.6) return '';
+    return c.toDataURL('image/jpeg', .8);
+  } catch(e) { return ''; }
+}
 function openShelfScan(){
   scanFound=[];
   $('ssBody').innerHTML='<p style="font-size:14px;margin:0 0 12px">Fotografiere dein Regal so, dass die <b>Buchrücken gut lesbar</b> sind (am besten ein Regalbrett pro Foto, gerade von vorne, ohne Spiegelungen). Die App erkennt die Titel und sucht Cover, Seitenzahl und Klappentext dazu.</p><label class="filebtn btn primary">📷 Foto aufnehmen oder wählen<input type="file" accept="image/*" id="ssFile"></label><p class="hint" style="margin-top:12px">Das Foto wird zur Erkennung an Google (Gemini) geschickt und nicht gespeichert.</p>';
@@ -2399,9 +2416,10 @@ function openShelfScan(){
 }
 function runShelfScan(file){
   $('ssBody').innerHTML='<p style="font-size:15px">🔍 Lese die Buchrücken … das dauert ein paar Sekunden.</p>';
-  storeImage(file, 1600).then(function(r){ return recognizeSpines(r.url); }).then(function(list){
+  var shelfCanvas=null;
+  storeImage(file, 1600).then(function(r){ try { shelfCanvas=scaled(r.img, 2400); } catch(e){} return recognizeSpines(r.url); }).then(function(list){
     if (!list.length) { $('ssBody').innerHTML='<p>Auf dem Foto habe ich keine Buchtitel erkannt. Probier ein schärferes Foto, näher dran.</p><label class="filebtn btn">Neues Foto<input type="file" accept="image/*" id="ssFile"></label>'; return; }
-    scanFound = list.slice(0,40).map(function(x){ x.on=true; x.state='…'; return x; });
+    scanFound = list.slice(0,40).map(function(x){ x.on=true; x.state='…'; x.spineImg=cutSpine(shelfCanvas, x); return x; });
     renderShelfScan();
     var idx=0; function worker(){ if (idx>=scanFound.length) return Promise.resolve(); var x=scanFound[idx++]; return enrichFound(x).then(function(){ x.state = x.isbn ? 'ok' : 'nf'; renderShelfScan(); return worker(); }); }
     return Promise.all([worker(), worker(), worker()]);
@@ -2410,7 +2428,7 @@ function runShelfScan(file){
 function renderShelfScan(){
   var n=scanFound.filter(function(x){return x.on;}).length;
   $('ssBody').innerHTML='<p style="margin:0 0 10px;font-size:14px"><b>'+scanFound.length+' Bücher erkannt.</b> Hak ab, welche ins Regal sollen. Titel kannst du noch korrigieren.</p><div class="sslist">'+scanFound.map(function(x,i){
-    return '<div class="ssrow'+(x.on?'':' off')+'"><input type="checkbox" data-ss="'+i+'"'+(x.on?' checked':'')+' aria-label="Übernehmen"><span class="mini" style="'+(x.cover?'background-image:url(&quot;'+esc(x.cover)+'&quot;)':'background:#d8cfc3')+'"></span><div class="ssinfo"><input type="text" data-sst="'+i+'" value="'+esc(x.ftitle||x.title)+'"><small>'+esc(x.fauthor||x.author||'')+(x.state==='…'?' · suche Infos …':(x.state==='nf'?' · keine Buchdaten gefunden':(x.pages?' · '+x.pages+' S.':'')+(x.blurb?' · mit Klappentext':'')))+'</small></div></div>';
+    return '<div class="ssrow'+(x.on?'':' off')+'"><input type="checkbox" data-ss="'+i+'"'+(x.on?' checked':'')+' aria-label="Übernehmen"><span class="ssimgs">'+(x.spineImg?'<span class="ssspine" style="background-image:url(&quot;'+esc(x.spineImg)+'&quot;)" title="Buchrücken vom Foto"></span>':'')+'<span class="mini" style="'+(x.cover?'background-image:url(&quot;'+esc(x.cover)+'&quot;)':'background:#d8cfc3')+'"></span></span><div class="ssinfo"><input type="text" data-sst="'+i+'" value="'+esc(x.ftitle||x.title)+'"><small>'+esc(x.fauthor||x.author||'')+(x.state==='…'?' · suche Infos …':(x.state==='nf'?' · keine Buchdaten gefunden':(x.pages?' · '+x.pages+' S.':'')+(x.blurb?' · mit Klappentext':'')))+'</small></div></div>';
   }).join('')+'</div>';
   var sh={}; shelfKeys().filter(function(k){ return customById(k); }).forEach(function(k){ sh[k]=shelfName(k); });
   $('ssFoot').innerHTML='<label class="f" style="flex:1 1 160px">Status<select id="ssStatus" class="sel"><option value="read">Gelesen</option><option value="want">Will ich lesen</option><option value="reading">Lese ich gerade</option></select></label>'+
@@ -2420,7 +2438,7 @@ function renderShelfScan(){
 function addScanned(){
   var st=($('ssStatus')||{}).value||'read', shelf=($('ssShelf')||{}).value||'', added=0;
   scanFound.filter(function(x){ return x.on; }).forEach(function(x){
-    var b={id:uid(), title:x.ftitle||x.title, author:x.fauthor||x.author||'', status:st, pages:x.pages||'', color:SPINE_COLORS[Math.floor(Math.random()*SPINE_COLORS.length)], tcol:'', style:'plain', font:'', size:'m', cover:x.cover||'', back:'', blurb:x.blurb||'', notes:'', rating:0, date:'', started:'', added:Date.now()+added, isbn:x.isbn||'', shelf:shelf, level:0};
+    var b={id:uid(), title:x.ftitle||x.title, author:x.fauthor||x.author||'', status:st, pages:x.pages||'', color:SPINE_COLORS[Math.floor(Math.random()*SPINE_COLORS.length)], tcol:'', style:'plain', font:'', size:'m', cover:x.cover||'', back:'', spineImg:x.spineImg||'', blurb:x.blurb||'', notes:'', rating:0, date:'', started:'', added:Date.now()+added, isbn:x.isbn||'', shelf:shelf, level:0};
     if (st==='read') b.date=today(); if (st==='reading') b.started=today();
     if (state.settings.sort==='manual') b.ord = nextOrd(bookShelf(b), 0)+added;
     state.books.push(b); added++;
