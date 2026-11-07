@@ -1191,14 +1191,14 @@ function coverCandidates(isbn, g){
 }
 function stripTags(s){ var d=document.createElement('div'); d.innerHTML=String(s||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/p>/gi,'\n\n'); return (d.textContent||'').replace(/\n{3,}/g,'\n\n').trim(); }
 function lkStatus(t){ $('lk-status').textContent=t; }
-function testImg(url){ return new Promise(function(res){ var i=new Image(), done=false; var t=setTimeout(function(){ if(!done){done=true;res(null);} }, 9000); i.onload=function(){ if(done) return; done=true; clearTimeout(t); var w=i.naturalWidth, h=i.naturalHeight; res(w>=100 && h>=140 && !(w===128 && h===178) && !(/books\.google/.test(url) && w<250) ? url : null); }; i.onerror=function(){ if(done) return; done=true; clearTimeout(t); res(null); }; i.src=url; }); }
+function testImg(url){ return new Promise(function(res){ var i=new Image(), done=false; var t=setTimeout(function(){ if(!done){done=true;res(null);} }, 9000); i.onload=function(){ if(done) return; done=true; clearTimeout(t); var w=i.naturalWidth, h=i.naturalHeight; res(w>=100 && h>=140 && !(w===128 && h===178) && !(w===575 && h===750) && !(/books\.google/.test(url) && w<250) ? url : null); }; i.onerror=function(){ if(done) return; done=true; clearTimeout(t); res(null); }; i.src=url; }); }
 function gbCover(v){ var l=v && v.imageLinks; if(!l) return null; var u=l.extraLarge||l.large||l.medium||l.thumbnail||l.smallThumbnail; return u ? u.replace(/^http:/,'https:').replace('&edge=curl','').replace(/zoom=\d/,'zoom=0') : null; }
 function fixName(n){ n=(n||'').trim(); var m=n.match(/^([^,]+),\s*(.+)$/); return m ? m[2]+' '+m[1] : n; }
 function dnbLookup(isbn){
   return fetch('https://services.dnb.de/sru/dnb?version=1.1&operation=searchRetrieve&recordSchema=MARC21-xml&maximumRecords=1&query=num%3D'+isbn).then(function(r){ return r.ok ? r.text() : null; }).then(function(x){
     if (!x) return null;
     var doc = new DOMParser().parseFromString(x,'application/xml');
-    function sf(tag, code){ var df=doc.querySelector('datafield[tag="'+tag+'"]'); if(!df) return ''; var s=df.querySelector('subfield[code="'+code+'"]'); return s ? s.textContent.trim() : ''; }
+    function sf(tag, code){ var df=doc.querySelector('datafield[tag="'+tag+'"]'); if(!df) return ''; var s=df.querySelector('subfield[code="'+code+'"]'); return s ? s.textContent.replace(/[\u0080-\u009f]/g,'').replace(/\s+/g,' ').trim() : ''; }
     var t = sf('245','a').replace(/[\s:\/;.,]+$/,'');
     if (!t) return null;
     var pages = (sf('300','a').match(/(\d+)\s*S/)||[])[1];
