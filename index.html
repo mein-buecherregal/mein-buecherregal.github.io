@@ -62,7 +62,7 @@ main{max-width:1180px;margin:0 auto;padding:10px 20px 40px}
 .spine:focus-visible{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--accent)}
 .sp-title,.sp-author{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1;line-height:1.05;pointer-events:none}
 .sp-title{font-size:clamp(10px,calc(var(--w) * .42px * var(--s)),18px);font-weight:700;flex:1 1 auto;min-height:0;letter-spacing:.3px}
-.sp-author{font-size:clamp(8px,calc(var(--w) * .26px * var(--s)),12px);opacity:.82;flex:0 1 auto;max-height:36%}
+.sp-author{font-size:clamp(8px,calc(var(--w) * .26px * var(--s)),12px);opacity:.82;flex:0 0 auto;max-height:36%}
 .st-bands::before,.st-bands::after{content:"";position:absolute;left:0;right:0;height:calc(9px * var(--s));background:rgba(0,0,0,.25)}
 .st-bands::before{top:calc(14px * var(--s))}.st-bands::after{bottom:calc(14px * var(--s))}
 .st-bands{padding-top:calc(30px * var(--s));padding-bottom:calc(30px * var(--s))}
@@ -1027,6 +1027,7 @@ function render(){
   });
   html += '<button class="addshelf" data-act="newshelf">＋ Neues Regal hinzufügen</button><p class="hintline">Tipp: Bücher und Deko mit der Maus ziehen (am Handy: kurz gedrückt halten) · Klick ins Regal zoomt heran · Deko anklicken probiert sie aus</p>';
   $('shelves').innerHTML = html;
+  fitSpineTitles($('shelves'));
   document.body.classList.toggle('dim-want', state.settings.layout==='all');
   renderBackupBanner();
   renderContextUI();
@@ -1135,7 +1136,44 @@ function readForm(){
   draft.pages=$('f-pages').value?Math.max(1,parseInt($('f-pages').value,10)||0):''; draft.date=$('f-date').value; draft.started=$('f-started').value;
   draft.blurb=$('f-blurb').value; draft.notes=$('f-notes').value; draft.style=$('f-style').value; draft.font=$('f-font').value; draft.size=$('f-size').value; draft.tcol=$('f-tcol').value; draft.shelf=$('f-shelf').value;
 }
-function previewSpine(){ $('spinePreview').innerHTML = spineHTML(Object.assign({}, draft, {title:draft.title||'Titel', author:draft.author||'Autor:in'}), true); }
+/* Titel auf dem Buchrücken: größtmögliche Schrift, voller Titel, höchstens zwei Zeilen */
+function fitSpineTitles(root){
+  if (!root) return;
+  root.querySelectorAll('.spine:not(.has-img) .sp-title').forEach(function(el){
+    var sp=el.parentNode, cs=getComputedStyle(sp), W=sp.clientWidth-4;
+    if (W<=4 || !sp.clientHeight) return;
+    var s=parseFloat(cs.getPropertyValue('--s'))||1, au=sp.querySelector('.sp-author'), min=Math.max(5, 6*s);
+    var full=el.getAttribute('data-full'); if (full==null) { full=el.textContent; el.setAttribute('data-full', full); } el.textContent=full;
+    if (au) { au.style.display=''; au.style.whiteSpace='nowrap'; au.style.fontSize='';
+      if (au.textContent) { var af=parseFloat(getComputedStyle(au).fontSize); while (au.scrollHeight>au.clientHeight+1 && af>min) { af-=0.5; au.style.fontSize=af+'px'; } } }
+    var inner=sp.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom), label=sp.classList.contains('st-label');
+    var cap1=Math.min(18*s, W*0.62), cap2=Math.min(cap1, W/2.25);
+    el.style.flex='none'; el.style.textOverflow='clip';
+    function room(){ var a=inner-(au && au.style.display!=='none' && au.textContent ? au.offsetHeight+6 : 0); if (label) a=Math.min(a, inner*0.62); return Math.floor(a-2); }
+    var avail;
+    function fits(fs, two){ el.style.whiteSpace=two?'normal':'nowrap'; el.style.fontSize=fs+'px'; return el.scrollHeight<=avail+1 && el.offsetWidth<=W+1 && el.offsetWidth<=fs*(two?2.25:1.2)+1; }
+    function best(cap, two){ if (cap<min) return 0; if (fits(cap,two)) return cap; if (!fits(min,two)) return 0; var lo=min, hi=cap; for (var i=0;i<7;i++){ var m=(lo+hi)/2; if (fits(m,two)) lo=m; else hi=m; } return lo; }
+    function attempt(){
+      avail=room(); if (avail<16) return false; el.style.height=avail+'px';
+      var f1=best(cap1,false), f2=f1>=cap2 ? 0 : best(cap2,true);
+      if (f1 && f1>=f2*0.9) { el.style.whiteSpace='nowrap'; el.style.fontSize=(Math.floor(f1*10)/10)+'px'; return true; }
+      if (f2) { el.style.whiteSpace='normal'; el.style.fontSize=(Math.floor(f2*10)/10)+'px'; return true; }
+      return false;
+    }
+    if (attempt()) return;
+    /* zu lang: erst den Autornamen weglassen, damit der Titel ganz draufpasst */
+    if (au && au.textContent) { au.style.display='none'; if (attempt()) return; }
+    /* immer noch zu lang: nach zwei Zeilen kürzen */
+    avail=room(); el.style.height=avail+'px';
+    var lo=1, hi=full.length;
+    while (lo<hi) { var m=Math.ceil((lo+hi)/2); el.textContent=full.slice(0,m).trim()+'…'; if (fits(min, true)) lo=m; else hi=m-1; }
+    el.textContent=full.slice(0,lo).trim()+'…'; el.style.whiteSpace='normal'; el.style.fontSize=min+'px';
+  });
+}
+var fitTimer=null;
+window.addEventListener('resize', function(){ clearTimeout(fitTimer); fitTimer=setTimeout(function(){ fitSpineTitles($('shelves')); }, 200); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ fitSpineTitles($('shelves')); });
+function previewSpine(){ $('spinePreview').innerHTML = spineHTML(Object.assign({}, draft, {title:draft.title||'Titel', author:draft.author||'Autor:in'}), true); fitSpineTitles($('spinePreview')); }
 function refreshEdit(){
   $('thFront').style.backgroundImage = draft.cover ? 'url("'+draft.cover+'")' : 'none';
   $('thBack').style.backgroundImage = draft.back ? 'url("'+draft.back+'")' : 'none';
@@ -1766,7 +1804,7 @@ function zoomScale(){
   var base = mobile ? 1.0 : Math.min(1.75, Math.max(1.25, (window.innerHeight - 150) / 262));
   return Math.max(.6, Math.min(2.6, base * Math.pow(1.18, zoomLevel)));
 }
-function openZoom(key){ zoomKey = key; zoomLevel = 0; renderZoom(); $('ovShelf').classList.add('open'); $('zoombox').scrollTop = 0; }
+function openZoom(key){ zoomKey = key; zoomLevel = 0; renderZoom(); $('ovShelf').classList.add('open'); fitSpineTitles($('zoomcase')); $('zoombox').scrollTop = 0; }
 function renderZoom(){
   if (!zoomKey) return;
   if (shelfKeys().indexOf(zoomKey)<0) { $('ovShelf').classList.remove('open'); zoomKey=null; return; }
@@ -1774,6 +1812,7 @@ function renderZoom(){
   var count = state.books.filter(function(b){ return bookShelf(b)===zoomKey && matchQ(b,q); }).length;
   $('zoomTitle').innerHTML = '<span class="pname">'+esc(shelfName(zoomKey))+'</span> <span>'+count+'</span>'; $('zoomTitle').dataset.rename = zoomKey;
   $('zoomcase').innerHTML = '<div style="--s:'+sc+';--row:calc(262px * '+sc+');--board:calc(18px * '+sc+')">'+caseHTML(zoomKey, q)+'</div>';
+  fitSpineTitles($('zoomcase'));
   document.querySelector('[data-zoomlevel]').dataset.zoomlevel = zoomKey;
   tickClocks();
 }
