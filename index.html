@@ -467,6 +467,12 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
 .ssinfo input{width:100%;font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;padding:2px 0;border-bottom:1px dashed transparent}
 .ssinfo input:focus{outline:none;border-bottom-color:#b5523b}
 .ssinfo small{display:block;color:#6f655c;font-size:12px}
+
+.spine.has-img{background-size:100% 100%;background-position:center;background-repeat:no-repeat}
+.spine.has-img .sp-title,.spine.has-img .sp-author,.spine.has-img::before,.spine.has-img::after{display:none}
+.up .thumb.spinethumb{width:22px;aspect-ratio:auto;height:93px;background-size:100% 100%}
+.uploads{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:820px){.uploads{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -589,11 +595,13 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
       <h2 id="editHead">Neues Buch</h2>
       <div class="lookup">
         <div class="row online-only">
-          <button type="button" class="btn primary" data-act="scan">📷 Barcode scannen</button>
+          <label class="filebtn btn primary">📸 Rückseite fotografieren<input type="file" accept="image/*" capture="environment" id="backShot"></label>
+          <button type="button" class="btn" data-act="scan">📷 Barcode live</button>
           <button type="button" class="btn" data-act="shelfscan">📚 Regal-Foto</button>
           <input type="text" id="lk-q" placeholder="oder ISBN / Titel eintippen" inputmode="search" enterkeyhint="search">
           <button type="button" class="btn" data-act="lookup">Suchen</button>
         </div>
+        <div class="hint online-only" style="margin-top:6px">Am besten: <b>Foto der Rückseite</b> – daraus holt die App ISBN, Klappentext und das Rückseiten-Bild; Cover und Seitenzahl kommen aus dem Internet.</div>
         <div class="sandbox-note">Tipp: Kopier ein Cover-Bild (z. B. aus der Google-Bildersuche) und füg es hier mit Strg/Cmd + V ein. Barcode-Scan und automatische Suche gehen nur in deiner eigenen Version im Netz.</div>
         <div class="lk-status" id="lk-status"></div>
         <div class="results" id="lk-results"></div>
@@ -610,6 +618,7 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
         <div class="full uploads">
           <div class="up" id="upFrontBox"><div class="thumb" id="thFront"></div><div class="ui"><b>Cover (Vorderseite)</b><span class="filebtn btn">Bild wählen<input type="file" accept="image/*" id="upFront"></span><button type="button" class="linkbtn" id="rmFront">Entfernen</button><span class="hint" id="stFront"></span></div></div>
           <div class="up" id="upBackBox"><div class="thumb" id="thBack"></div><div class="ui"><b>Rückseite</b><span class="filebtn btn">Bild wählen<input type="file" accept="image/*" id="upBack"></span><button type="button" class="linkbtn" id="rmBack">Entfernen</button><span class="hint" id="stBack"></span></div></div>
+          <div class="up" id="upSpineBox"><div class="thumb spinethumb" id="thSpine"></div><div class="ui"><b>Buchrücken (Foto, optional)</b><span class="filebtn btn">Foto wählen<input type="file" accept="image/*" id="upSpine"></span><button type="button" class="linkbtn" id="rmSpine">Entfernen</button><span class="hint" id="stSpine">Ohne Foto wird der Rücken in der Cover-Farbe gestaltet.</span></div></div>
         </div>
         <label class="f full">Klappentext (steht auf der Rückseite, wenn du kein Bild hast)<textarea id="f-blurb" maxlength="4000"></textarea></label>
         <details class="design full" open>
@@ -637,7 +646,7 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
       <h2>Barcode scannen</h2>
       <div class="scanframe"><video id="scanVideo" playsinline muted autoplay></video></div>
       <div class="lk-status" id="scanStatus">Halte den Strichcode auf der Buchrückseite in den Rahmen.</div>
-      <div class="actions" style="justify-content:center"><span class="filebtn btn">🖼 Foto vom Barcode<input type="file" accept="image/*" id="scanFile"></span><button class="btn" data-act="stopscan">Ohne Scan eingeben</button></div>
+      <div class="actions" style="justify-content:center"><span class="filebtn btn primary">📸 Foto der Rückseite<input type="file" accept="image/*" capture="environment" id="scanFile"></span><button class="btn" data-act="stopscan">Ohne Scan eingeben</button></div>
       <button class="btn online-only" data-act="shelfscan" style="margin-top:4px">📚 Ganzes Regal fotografieren (mehrere Bücher)</button>
     </div>
   </div>
@@ -965,8 +974,8 @@ function applyLook(){
   document.title = s.title || 'Mein Bücherregal';
 }
 function spineHTML(b, preview){
-  var cls = 'spine st-'+(b.style||'plain')+' '+b.status;
-  return (preview?'':'<div class="slot" data-item="b:'+esc(b.id)+'">')+'<button type="button" class="'+cls+'" '+(preview?'tabindex="-1"':'data-id="'+esc(b.id)+'"')+' style="--w:'+widthOf(b)+';--h:'+heightOf(b)+';--c:'+esc(b.color)+';--t:'+esc(autoText(b))+';font-family:'+fontOf(b)+'" title="'+esc(b.title)+(b.author?' – '+esc(b.author):'')+'">'+
+  var cls = 'spine st-'+(b.style||'plain')+' '+b.status+(b.spineImg?' has-img':'');
+  return (preview?'':'<div class="slot" data-item="b:'+esc(b.id)+'">')+'<button type="button" class="'+cls+'" '+(preview?'tabindex="-1"':'data-id="'+esc(b.id)+'"')+' style="--w:'+widthOf(b)+';--h:'+heightOf(b)+';--c:'+esc(b.color)+';--t:'+esc(autoText(b))+';font-family:'+fontOf(b)+(b.spineImg?';background-image:url(&quot;'+esc(b.spineImg)+'&quot;)':'')+'" title="'+esc(b.title)+(b.author?' – '+esc(b.author):'')+'">'+
     '<span class="ribbon"></span><span class="sp-title">'+esc(b.title||'Titel')+'</span><span class="sp-author">'+esc(b.author||'')+'</span></button>'+(preview?'':'</div>');
 }
 var liveOn = {};
@@ -1101,14 +1110,14 @@ $('f-font').innerHTML = '<option value="">Wie im Regal eingestellt</option>' + O
 function shelfSelectHTML(sel){ return '<option value="">Automatisch (nach Status)</option>' + state.settings.shelves.map(function(c){ return '<option value="'+esc(c.id)+'"'+(sel===c.id?' selected':'')+'>'+esc(c.name||'Regal')+'</option>'; }).join(''); }
 function openEdit(b){
   draftIsNew = !b;
-  draft = b ? JSON.parse(JSON.stringify(b)) : {id:uid(),title:'',author:'',status:'want',pages:'',color:SPINE_COLORS[Math.floor(Math.random()*12)],tcol:'',style:'plain',font:'',size:'m',cover:'',back:'',blurb:'',notes:'',rating:0,date:'',started:'',added:Date.now(),isbn:'',shelf:'',level:0,_auto:true};
+  draft = b ? JSON.parse(JSON.stringify(b)) : {id:uid(),title:'',author:'',status:'want',pages:'',color:SPINE_COLORS[Math.floor(Math.random()*12)],tcol:'',style:'plain',font:'',size:'m',cover:'',back:'',spineImg:'',blurb:'',notes:'',rating:0,date:'',started:'',added:Date.now(),isbn:'',shelf:'',level:0,_auto:true};
   coverImg = null;
   $('editHead').textContent = b ? 'Buch bearbeiten' : 'Neues Buch';
   $('f-title').value=draft.title; $('f-author').value=draft.author; $('f-status').value=draft.status; $('f-pages').value=draft.pages||'';
   $('f-date').value=draft.date||''; $('f-started').value=draft.started||''; $('f-blurb').value=draft.blurb||''; $('f-notes').value=draft.notes||'';
   $('f-style').value=draft.style||'plain'; $('f-font').value=draft.font||''; $('f-size').value=draft.size||'m'; $('f-tcol').value=draft.tcol||'';
   $('f-shelf').innerHTML = shelfSelectHTML(draft.shelf||''); $('f-shelf').value = draft.shelf && customById(draft.shelf) ? draft.shelf : '';
-  $('editErr').textContent=''; $('stFront').textContent=''; $('stBack').textContent='';
+  $('editErr').textContent=''; $('stFront').textContent=''; $('stBack').textContent=''; $('stSpine').textContent='Ohne Foto wird der Rücken in der Cover-Farbe gestaltet.';
   $('lk-q').value=draft.isbn||''; $('lk-status').textContent=''; $('lk-results').innerHTML=''; $('lk-cands').innerHTML='';
   $('saveNext').style.display = draftIsNew ? '' : 'none';
   $('ovView').classList.remove('open'); viewId=null;
@@ -1127,6 +1136,7 @@ function refreshEdit(){
   $('thFront').style.backgroundImage = draft.cover ? 'url("'+draft.cover+'")' : 'none';
   $('thBack').style.backgroundImage = draft.back ? 'url("'+draft.back+'")' : 'none';
   $('rmFront').style.display = draft.cover ? '' : 'none'; $('rmBack').style.display = draft.back ? '' : 'none';
+  $('thSpine').style.backgroundImage = draft.spineImg ? 'url("'+draft.spineImg+'")' : 'none'; $('rmSpine').style.display = draft.spineImg ? '' : 'none';
   $('colorFromCover').style.display = draft.cover ? '' : 'none';
   $('spineSw').innerHTML = SPINE_COLORS.map(function(c){ return '<button type="button" class="sw'+(c===draft.color?' on':'')+'" style="background:'+c+'" data-col="'+c+'" aria-label="Farbe '+c+'"></button>'; }).join('') + '<input type="color" id="f-color" value="'+esc(draft.color)+'" aria-label="Eigene Farbe">';
   previewSpine();
@@ -1136,7 +1146,7 @@ function handleUpload(file, side){
   var st = $(side==='cover'?'stFront':'stBack'); st.textContent='Lädt…';
   storeImage(file, side==='cover'?640:720).then(function(r){
     if (!draft) return;
-    if (side==='cover') { coverImg = r.img; if (draft._auto!==false) try { draft.color = avgColor(r.img); } catch(e){} }
+    if (side==='cover') { coverImg = r.img; draft._ownCover = true; if (draft._auto!==false) try { draft.color = avgColor(r.img); } catch(e){} }
     draft[side] = r.url; st.textContent='✓'; readForm(); refreshEdit();
   }).catch(function(e){ st.textContent=imgError(e); });
 }
@@ -1145,7 +1155,7 @@ function saveDraft(next){
   if (!draft.title) { $('editErr').textContent='Bitte gib einen Titel ein – oder scanne den Barcode.'; $('f-title').focus(); return; }
   if (draft.status==='read' && !draft.date) draft.date = today();
   if (draft.status==='reading' && !draft.started) draft.started = today();
-  delete draft._auto;
+  delete draft._auto; delete draft._pb; delete draft._ownCover;
   var old = bookById(draft.id);
   if (!old || old.status!==draft.status || (old.shelf||'')!==(draft.shelf||'')) { draft.level = 0; delete draft.ord; }
   if (draftIsNew || !old) state.books.push(draft);
@@ -1213,7 +1223,7 @@ function showCovers(urls){
     ok = ok.filter(Boolean);
     if (!draft) return 0;
     $('lk-cands').innerHTML = ok.length > 1 ? ok.map(function(u,i){ return '<button type="button" class="cand'+(i===0?' on':'')+'" data-cand="'+esc(u)+'" title="Dieses Cover nehmen"><img src="'+esc(u)+'" alt=""></button>'; }).join('') : '';
-    if (ok.length) pickCover(ok[0]);
+    if (ok.length && !draft._ownCover) pickCover(ok[0]);
     return ok.length;
   });
 }
@@ -1225,6 +1235,23 @@ function pickCover(url){
   var i=new Image(); i.crossOrigin='anonymous';
   i.onload=function(){ try { var c=avgColor(i); coverImg=i; if (draft && draft.cover===url && draft._auto!==false) { draft.color=c; readForm(); refreshEdit(); } } catch(e){} };
   i.src=url;
+}
+/* Kein Klappentext zu dieser Ausgabe? Oft hat eine andere Ausgabe (Taschenbuch, E-Book) einen. */
+function blurbFromOtherEdition(title, author){
+  var id = draft && draft.id, sur=(author||'').split(/[ ,.]+/).filter(function(w){ return w.length>2; }).pop()||'';
+  lkStatus($('lk-status').textContent+' Suche Klappentext …');
+  return gbooks('volumes?maxResults=20&q='+encodeURIComponent('intitle:'+title+(sur?'+inauthor:'+sur:''))).then(function(d){
+    var low=function(t){ return String(t||'').toLowerCase(); }, T=low(title).replace(/[:.].*$/,'').trim();
+    var cands=(d.items||[]).map(function(it){ return it.volumeInfo||{}; }).filter(function(v){ return v.description && v.description.length>120 && low(v.title).indexOf(T)===0 && (!sur || low((v.authors||[]).join(' ')).indexOf(low(sur))>=0) && !/lektüre|interpretation|erläuterung|analyse|unterricht/.test(low(v.title+' '+(v.subtitle||''))); });
+    cands.sort(function(a,b){ return (b.language==='de')-(a.language==='de') || b.description.length-a.description.length; });
+    return cands[0] ? stripTags(cands[0].description) : '';
+  }).catch(function(){ return ''; }).then(function(t){
+    if (!draft || draft.id!==id) return;
+    var cur=$('lk-status').textContent.replace(' Suche Klappentext …','');
+    if (t && !$('f-blurb').value.trim()) { draft.blurb=t; $('f-blurb').value=t; lkStatus(cur+' (Klappentext von einer anderen Ausgabe übernommen.)'); }
+    else if (!t) lkStatus(cur+' Kein Klappentext online – tipp auf „📸 Rückseite fotografieren“, dann lese ich ihn von deinem Buch ab.');
+    else lkStatus(cur);
+  });
 }
 function lookupIsbn(raw){
   var isbn = cleanIsbn(raw); if (isbn.length===10) isbn = isbn10to13(isbn);
@@ -1243,8 +1270,10 @@ function lookupIsbn(raw){
   Promise.all([gb, ol, dn, olw]).then(function(r){
     var g=r[0]||{}, o=r[1]||{}, d=r[2]||{}, owd=r[3]||'';
     if (r[0]||r[1]||r[2]) {
-      fillFrom({ title: d.title || g.title || o.title, author: d.author || (g.authors||[]).join(', ') || (o.authors||[]).map(function(a){return a.name;}).join(', '), pages: g.pageCount || d.pages || o.number_of_pages, blurb: stripTags(g.description || owd || (o.excerpts && o.excerpts[0] && o.excerpts[0].text) || ''), isbn: isbn });
-      lkStatus((dup ? '⚠ Dieses Buch steht schon in deinem Regal. ' : '✓ Gefunden! ') + 'Prüf kurz die Angaben – und dann Speichern.' + ((g.description||owd) ? '' : ' (Kein Klappentext gefunden – du kannst ihn selbst eintragen.)'));
+      var pb = draft && draft._pb, onlineBlurb = stripTags(g.description || owd || (o.excerpts && o.excerpts[0] && o.excerpts[0].text) || '');
+      fillFrom({ title: d.title || g.title || o.title, author: d.author || (g.authors||[]).join(', ') || (o.authors||[]).map(function(a){return a.name;}).join(', '), pages: g.pageCount || d.pages || o.number_of_pages, blurb: pb ? '' : onlineBlurb, isbn: isbn });
+      lkStatus((dup ? '⚠ Dieses Buch steht schon in deinem Regal. ' : '✓ Gefunden! ') + (pb ? 'Klappentext und Rückseite stammen von deinem Foto. ' : '') + 'Prüf kurz die Angaben – und dann Speichern.');
+      if (!pb && !onlineBlurb && draft && draft.title) blurbFromOtherEdition(draft.title, draft.author);
     } else {
       if (draft) draft.isbn = isbn;
       lkStatus('Zu dieser ISBN habe ich keine Buchdaten gefunden. Gib Titel & Autor:in bitte selbst ein – ich suche trotzdem ein Cover.');
@@ -1297,33 +1326,83 @@ function onCode(text){
   stopScan();
   var go=scanThen; scanThen=null; if (go) go(c);
 }
+/* Kamerabild-Ausschnitt (Mitte) auf ein Canvas holen */
+function frameCanvas(video, wf, hf, max){
+  var vw=video.videoWidth, vh=video.videoHeight; if (!vw) return null;
+  var cw=Math.round(vw*wf), ch=Math.round(vh*hf), s=Math.min(1, max/Math.max(cw,ch));
+  var c=document.createElement('canvas'); c.width=Math.round(cw*s); c.height=Math.round(ch*s);
+  c.getContext('2d').drawImage(video, (vw-cw)/2, (vh-ch)/2, cw, ch, 0, 0, c.width, c.height); return c;
+}
+function zxHints(Z, hard){ var h=new Map(); h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A]); if (hard) h.set(Z.DecodeHintType.TRY_HARDER,true); return h; }
+function zxDecodeCanvas(Z, rd, c){ try { var r=rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c)))); return r ? r.getText() : ''; } catch(e) { return ''; } }
+/* Strichcode in einem Foto finden: verschiedene Größen, Ausschnitte und Drehungen probieren */
+function decodeBarcode(src){
+  return nativeDetector().then(function(det){
+    return det ? det.detect(src).then(function(c){ return c&&c.length ? c[0].rawValue : ''; }).catch(function(){ return ''; }) : '';
+  }).then(function(v){
+    if (v) return v;
+    return loadZXing().then(function(Z){
+      var rd=new Z.MultiFormatReader(); rd.setHints(zxHints(Z,true));
+      var W=src.width, H=src.height;
+      var crops=[[0,0,1,1],[0,.35,1,.65],[0,.5,1,.5],[0,0,1,.5],[.3,.3,.7,.7]];
+      var sizes=[1400,900,600];
+      for (var r=0;r<2;r++) for (var k=0;k<crops.length;k++) for (var z=0;z<sizes.length;z++) {
+        var cr=crops[k], sx=cr[0]*W, sy=cr[1]*H, sw=cr[2]*W, sh=cr[3]*H, sc=Math.min(1, sizes[z]/Math.max(sw,sh));
+        var c=document.createElement('canvas'), x=c.getContext('2d');
+        if (r) { c.width=Math.round(sh*sc); c.height=Math.round(sw*sc); x.translate(c.width,0); x.rotate(Math.PI/2); }
+        else { c.width=Math.round(sw*sc); c.height=Math.round(sh*sc); }
+        x.drawImage(src, sx, sy, sw, sh, 0, 0, sw*sc, sh*sc);
+        var t=zxDecodeCanvas(Z, rd, c); if (t) return t;
+      }
+      return '';
+    }).catch(function(){ return ''; });
+  });
+}
+/* Wenn der Strichcode nicht klappt: alle paar Sekunden liest die KI die ISBN-Ziffern vom Kamerabild */
+function aiScanHelper(video){
+  var t0=Date.now(), last=0, busy=false, n=0;
+  return function(){
+    if (SANDBOX || typeof readIsbnAI!=='function' || busy || n>=6 || Date.now()-t0<3500 || Date.now()-last<4500) return;
+    var c=frameCanvas(video, 1, 1, 1024); if (!c) return;
+    busy=true; n++; last=Date.now();
+    if (n===1) $('scanStatus').textContent='Ich versuche, die ISBN-Ziffern direkt abzulesen … halte das Buch ruhig.';
+    readIsbnAI(c.toDataURL('image/jpeg',.85)).then(function(i){ busy=false; if (i && scanning) onCode(i); }).catch(function(){ busy=false; n=99; });
+  };
+}
 function startScan(then){
   scanThen = then; scanning = true;
   $('scanStatus').textContent='Kamera wird gestartet …';
   $('ovScan').classList.add('open');
   var video=$('scanVideo');
   video.setAttribute('playsinline',''); video.setAttribute('muted',''); video.muted = true;
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('scanStatus').textContent='Hier ist keine Kamera verfügbar (die Seite muss über https geöffnet sein). Wähl stattdessen ein Foto vom Barcode.'; return; }
-  nativeDetector().then(function(det){
-    if (det) {
-      return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}, audio:false}).then(function(stream){
-        if (!scanning) { stream.getTracks().forEach(function(t){t.stop();}); return; }
-        scanStream=stream; video.srcObject=stream; return video.play().then(function(){
-          $('scanStatus').textContent='Halte den Strichcode auf der Buchrückseite in den Rahmen.';
-          (function loop(){ if(!scanning) return; det.detect(video).then(function(codes){ if(codes&&codes.length) onCode(codes[0].rawValue); }).catch(function(){}).then(function(){ if(scanning) scanTimer=setTimeout(loop,180); }); })();
-        });
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('scanStatus').textContent='Hier ist keine Kamera verfügbar. Mach stattdessen ein Foto der Rückseite.'; return; }
+  Promise.all([nativeDetector(), loadZXing().catch(function(){ return null; })]).then(function(r){
+    var det=r[0], Z=r[1];
+    if (!scanning) return;
+    return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}, audio:false}).then(function(stream){
+      if (!scanning) { stream.getTracks().forEach(function(t){t.stop();}); return; }
+      scanStream=stream; video.srcObject=stream;
+      try { var tr=stream.getVideoTracks()[0], caps=tr.getCapabilities&&tr.getCapabilities(); if (caps && caps.focusMode && caps.focusMode.indexOf('continuous')>=0) tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){}); } catch(e){}
+      return video.play().then(function(){
+        $('scanStatus').textContent='Halte den Strichcode der Buchrückseite in den Rahmen – nicht zu nah, damit er scharf ist.';
+        var rd=null; if (Z) { rd=new Z.MultiFormatReader(); rd.setHints(zxHints(Z,false)); }
+        var ai=aiScanHelper(video), flip=0;
+        (function loop(){
+          if (!scanning) return;
+          var p = det ? det.detect(video).then(function(c){ return c&&c.length ? c[0].rawValue : ''; }).catch(function(){ return ''; }) : Promise.resolve('');
+          p.then(function(code){
+            if (!scanning) return;
+            if (!code && rd) { flip=(flip+1)%3; var c=frameCanvas(video, flip===2?1:.85, flip===1?.3:.5, flip===2?1280:900); if (c) code=zxDecodeCanvas(Z, rd, c); }
+            if (code) { onCode(code); if (!scanning) return; }
+            ai();
+            scanTimer=setTimeout(loop, 90);
+          });
+        })();
       });
-    }
-    return loadZXing().then(function(Z){
-      if (!scanning) return;
-      var hints=new Map(); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A]); hints.set(Z.DecodeHintType.TRY_HARDER,true);
-      zxReader=new Z.BrowserMultiFormatReader(hints, 250);
-      $('scanStatus').textContent='Halte den Strichcode auf der Buchrückseite in den Rahmen.';
-      return zxReader.decodeFromConstraints({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}}, video, function(res){ if(res && scanning) onCode(res.getText()); });
     });
   }).catch(function(err){
     var n = err && err.name;
-    $('scanStatus').textContent = n==='NotAllowedError' ? 'Kein Kamerazugriff. Auf dem iPhone: Einstellungen → Safari → Kamera → „Erlauben“. Oder wähl ein Foto vom Barcode.' : (n==='NotFoundError' ? 'Keine Kamera gefunden. Wähl ein Foto vom Barcode.' : 'Die Kamera ließ sich nicht starten. Wähl ein Foto vom Barcode.');
+    $('scanStatus').textContent = n==='NotAllowedError' ? 'Kein Kamerazugriff. Auf dem iPhone: Einstellungen → Safari → Kamera → „Erlauben“. Oder mach ein Foto der Rückseite.' : (n==='NotFoundError' ? 'Keine Kamera gefunden. Mach ein Foto der Rückseite.' : 'Die Kamera ließ sich nicht starten. Mach stattdessen ein Foto der Rückseite.');
   });
 }
 function stopScan(){
@@ -1335,13 +1414,62 @@ function stopScan(){
 }
 function scanImageFile(file){
   if (!file) return;
+  if (draft) { stopScan(); bookPhoto(file, 'back', true); return; }
   $('scanStatus').textContent='Lese den Barcode aus dem Foto …';
-  var url=URL.createObjectURL(file);
-  nativeDetector().then(function(det){
-    if (det) return createImageBitmap(file).then(function(bmp){ return det.detect(bmp); }).then(function(c){ if(!c.length) throw 0; return c[0].rawValue; });
-    return loadZXing().then(function(Z){ var h=new Map(); h.set(Z.DecodeHintType.TRY_HARDER,true); return new Z.BrowserMultiFormatReader(h).decodeFromImageUrl(url).then(function(r){ return r.getText(); }); });
-  }).then(function(t){ URL.revokeObjectURL(url); onCode(t); }).catch(function(){ URL.revokeObjectURL(url); $('scanStatus').textContent='Im Foto wurde kein Barcode erkannt. Probier ein schärferes Foto, nah am Strichcode.'; });
+  loadImage(file).then(function(img){ return decodeBarcode(scaled(img, 2000)); }).then(function(t){ if (!t) throw 0; onCode(t); }).catch(function(){ $('scanStatus').textContent='Im Foto wurde kein Barcode erkannt. Probier ein schärferes Foto.'; });
 }
+
+/* ---------- 📸 Buch-Foto: Rückseite (ISBN + Klappentext + Bild), Cover oder Buchrücken ---------- */
+function cropRotate(src, box, top, max){
+  var W=src.width, H=src.height, x0=0, y0=0, x1=W, y1=H;
+  if (Array.isArray(box) && box.length===4) {
+    var b=box.map(Number);
+    if (b.every(function(v){ return isFinite(v); }) && b[2]>b[0] && b[3]>b[1]) {
+      var m=8; y0=Math.max(0,(b[0]-m)/1000*H); x0=Math.max(0,(b[1]-m)/1000*W); y1=Math.min(H,(b[2]+m)/1000*H); x1=Math.min(W,(b[3]+m)/1000*W);
+      if ((x1-x0)*(y1-y0) < W*H*0.03) { x0=0; y0=0; x1=W; y1=H; }
+    }
+  }
+  var cw=x1-x0, ch=y1-y0, rot = top==='left' ? 90 : (top==='right' ? -90 : (top==='down' ? 180 : 0));
+  var sw = rot%180 ? ch : cw, sh = rot%180 ? cw : ch, s=Math.min(1, max/Math.max(sw,sh));
+  var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(sw*s)); c.height=Math.max(1,Math.round(sh*s));
+  var x=c.getContext('2d'); x.translate(c.width/2, c.height/2); x.rotate(rot*Math.PI/180); x.drawImage(src, x0, y0, cw, ch, -cw*s/2, -ch*s/2, cw*s, ch*s);
+  return c;
+}
+var PHOTO_UI={cover:['stFront',700], back:['stBack',900], spineImg:['stSpine',900]};
+function bookPhoto(file, side, full){
+  if (!file || !draft) return;
+  var id=draft.id, ui=PHOTO_UI[side], st=$(ui[0]);
+  st.textContent='Lädt…';
+  if (side==='back') lkStatus('📸 Lese die Rückseite … (ISBN, Klappentext, Bild) – das dauert ein paar Sekunden.');
+  loadImage(file).then(function(img){
+    var big=scaled(img, 1600), aiUrl=scaled(img, 1280).toDataURL('image/jpeg', .85);
+    if (!draft || draft.id!==id) return;
+    draft[side] = scaled(img, ui[1]).toDataURL('image/jpeg', .82); if (side==='cover') draft._ownCover=true;
+    readForm(); refreshEdit();
+    var pBar = side==='back' ? decodeBarcode(big) : Promise.resolve('');
+    var aiFail=null, pAi = (SANDBOX || typeof readBookPhoto!=='function') ? Promise.resolve({}) : readBookPhoto(aiUrl, side).catch(function(e){ aiFail=e; return {}; });
+    return Promise.all([pBar, pAi]).then(function(r){
+      if (!draft || draft.id!==id) return;
+      var info=r[1]||{}, c=cropRotate(big, info.box, info.top, ui[1]);
+      draft[side]=c.toDataURL('image/jpeg', .82);
+      if ((side==='cover' || (side==='spineImg' && !draft.cover)) && draft._auto!==false) try { draft.color=avgColor(c); } catch(e){}
+      st.textContent='✓'; readForm();
+      if (side==='back') {
+        var isbn=isbnOkLocal(r[0]) || info.isbn || '', blurb=String(info.blurb||'').trim();
+        if (blurb && (full || !draft.blurb)) { draft.blurb=blurb; $('f-blurb').value=blurb; draft._pb=true; }
+        refreshEdit();
+        if (isbn && (full || !draft.title)) { $('lk-q').value=isbn; lookupIsbn(isbn); }
+        else if (!isbn && (full || !draft.title) && info.title) { fillFrom({title:info.title, author:info.author}); $('lk-q').value=info.title+(info.author?' '+info.author:''); searchTitle($('lk-q').value); }
+        else if (!isbn && (full || !draft.title)) lkStatus(aiFail ? ('Die ISBN konnte ich nicht lesen. '+aiErr(aiFail)+' Tipp: Probier den Live-Scanner oder tipp die ISBN ein.') : 'Auf dem Foto habe ich keine ISBN gefunden. Fotografiere die Rückseite so, dass Strichcode und ISBN-Ziffern scharf zu sehen sind – oder tipp die ISBN ein.');
+        else lkStatus(blurb ? '✓ Rückseite und Klappentext übernommen.' : '✓ Rückseite übernommen.');
+      } else {
+        refreshEdit();
+        if (!draft.title && info.title) { fillFrom({title:info.title, author:info.author}); $('lk-q').value=info.title+(info.author?' '+info.author:''); searchTitle($('lk-q').value); }
+      }
+    });
+  }).catch(function(e){ st.textContent=imgError(e); });
+}
+function isbnOkLocal(s){ s=cleanIsbn(s); if (s.length===10) s=isbn10to13(s); return isIsbn(s) && /^97[89]/.test(s) ? s : ''; }
 function scanIntoEditor(){ startScan(function(isbn){ $('lk-q').value=isbn; lookupIsbn(isbn); }); }
 
 /* ---------- Deko: Interaktion ---------- */
@@ -2198,6 +2326,31 @@ function recognizeSpines(dataUrl){
     return attempt();
   });
 }
+/* ---------- Ein einzelnes Buch per Foto: Rückseite, Cover oder Buchrücken ---------- */
+function aiAsk(parts){
+  return getAiModel().then(function(r){
+    var i=0;
+    function attempt(){
+      var model = r.ai.getGenerativeModel(r.inst, {model:AI_MODELS[i], generationConfig:{responseMimeType:'application/json', temperature:0}});
+      return withTimeout(model.generateContent(parts), 40000).then(function(res){ return res.response.text(); })
+        .catch(function(e){ if (++i < AI_MODELS.length && !/quota|429|permission|PERMISSION|API_NOT|not been used|disabled|App Check|appCheck/i.test(String(e && e.message))) return attempt(); throw e; });
+    }
+    return attempt();
+  });
+}
+function aiJSON(t){ var m=String(t).match(/\{[\s\S]*\}/); return JSON.parse(m ? m[0] : t); }
+function isbnOk(s){ s=String(s||'').replace(/[^0-9X]/gi,'').toUpperCase(); if (s.length===10) s=isbn10to13(s); if (!/^97[89]\d{10}$/.test(s)) return ''; var sum=0; for (var i=0;i<12;i++) sum+=(+s[i])*(i%2?3:1); return ((10-sum%10)%10)===+s[12] ? s : ''; }
+var PHOTO_PROMPTS={
+  back:'Das ist ein Foto der RÜCKSEITE eines Buchs. Antworte NUR mit JSON: {"isbn":"die ISBN-13 (nur Ziffern; steht meist über oder unter dem Strichcode und beginnt mit 978 oder 979) oder leer","title":"Buchtitel, falls erkennbar","author":"Autor:in, falls erkennbar","blurb":"der Klappentext WÖRTLICH und vollständig, Absätze mit \\n getrennt. Lass Rezensionszitate von Zeitungen/Personen, Preis, Verlag, ISBN und Webadressen weg.","box":[ymin,xmin,ymax,xmax],"top":"up|down|left|right"}. box = Umriss des Buchs im Bild, Werte 0 bis 1000. top = in welche Richtung die Oberkante des Buchs im Bild zeigt.',
+  cover:'Das ist ein Foto der VORDERSEITE (Cover) eines Buchs. Antworte NUR mit JSON: {"title":"Buchtitel","author":"Autor:in","box":[ymin,xmin,ymax,xmax],"top":"up|down|left|right"}. box = Umriss des Buchs im Bild, Werte 0 bis 1000. top = in welche Richtung die Oberkante des Buchs zeigt.',
+  spineImg:'Das ist ein Foto vom BUCHRÜCKEN eines einzelnen Buchs. Antworte NUR mit JSON: {"title":"Buchtitel","author":"Autor:in","box":[ymin,xmin,ymax,xmax],"top":"up|down|left|right"}. box = Umriss NUR dieses Buchrückens im Bild, Werte 0 bis 1000. top = in welche Richtung die Oberkante des Buchs zeigt (bei deutschen Büchern läuft die Schrift auf dem Rücken meist von unten nach oben).'
+};
+function readBookPhoto(dataUrl, side){
+  return aiAsk([PHOTO_PROMPTS[side]||PHOTO_PROMPTS.back, {inlineData:{data:dataUrl.split(',')[1], mimeType:'image/jpeg'}}]).then(aiJSON).then(function(o){ o=o||{}; o.isbn=isbnOk(o.isbn); return o; });
+}
+function readIsbnAI(dataUrl){
+  return aiAsk(['Auf diesem Kamerabild ist (vermutlich) die Rückseite eines Buchs. Lies die ISBN-13 (meist über oder unter dem Strichcode, beginnt mit 978 oder 979). Antworte NUR mit JSON {"isbn":"nur Ziffern oder leer"}. Rate nicht – wenn nicht sicher lesbar, leer lassen.', {inlineData:{data:dataUrl.split(',')[1], mimeType:'image/jpeg'}}]).then(aiJSON).then(function(o){ return isbnOk(o && o.isbn); });
+}
 function aiErr(e){
   var m=String((e && (e.message||e.code))||e);
   if (/nocfg/.test(m)) return 'Dafür muss die Online-Verbindung eingerichtet sein (☁️ Teilen).';
@@ -2405,6 +2558,7 @@ document.addEventListener('click', function(e){
   if (t.dataset.col && draft) { draft.color=t.dataset.col; draft._auto=false; readForm(); refreshEdit(); return; }
   if (t.id==='rmFront') { draft.cover=''; coverImg=null; refreshEdit(); return; }
   if (t.id==='rmBack') { draft.back=''; refreshEdit(); return; }
+  if (t.id==='rmSpine') { draft.spineImg=''; readForm(); refreshEdit(); return; }
   if (t.id==='colorFromCover' && draft) {
     if (coverImg) { try { draft.color=avgColor(coverImg); readForm(); refreshEdit(); } catch(err){} }
     else if (draft.cover) { var im=new Image(); im.crossOrigin='anonymous'; im.onload=function(){ try{ draft.color=avgColor(im); readForm(); refreshEdit(); }catch(err){ $('editErr').textContent='Bei diesem Cover geht das leider nicht – wähl die Farbe selbst.'; } }; im.src=draft.cover; }
@@ -2439,8 +2593,10 @@ document.addEventListener('input', function(e){
 });
 document.addEventListener('change', function(e){
   var t=e.target;
-  if (t.id==='upFront') { handleUpload(t.files[0],'cover'); t.value=''; return; }
-  if (t.id==='upBack') { handleUpload(t.files[0],'back'); t.value=''; return; }
+  if (t.id==='upFront') { var f1=t.files[0]; t.value=''; if (SANDBOX) handleUpload(f1,'cover'); else bookPhoto(f1,'cover'); return; }
+  if (t.id==='upBack') { var f2=t.files[0]; t.value=''; if (SANDBOX) handleUpload(f2,'back'); else bookPhoto(f2,'back'); return; }
+  if (t.id==='upSpine') { var f3=t.files[0]; t.value=''; if (SANDBOX) { if (f3) storeImage(f3, 900).then(function(r){ if(draft){ draft.spineImg=r.url; readForm(); refreshEdit(); } }); } else bookPhoto(f3,'spineImg'); return; }
+  if (t.id==='backShot') { var f4=t.files[0]; t.value=''; if (scanning||scanStream) stopScan(); bookPhoto(f4,'back',true); return; }
   if (t.id==='scanFile') { scanImageFile(t.files[0]); t.value=''; return; }
   if (t.id==='ssFile') { var sf=t.files&&t.files[0]; t.value=''; if (sf) runShelfScan(sf); return; }
   if (t.dataset && t.dataset.ss!==undefined) { var sx=scanFound[+t.dataset.ss]; if (sx) { sx.on=t.checked; renderShelfScan(); } return; }
