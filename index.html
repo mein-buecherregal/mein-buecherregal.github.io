@@ -1420,7 +1420,7 @@ function scanImageFile(file){
 }
 
 /* ---------- 📸 Buch-Foto: Rückseite (ISBN + Klappentext + Bild), Cover oder Buchrücken ---------- */
-function cropRotate(src, box, top, max){
+function cropRotate(src, box, top, max, rotDeg){
   var W=src.width, H=src.height, x0=0, y0=0, x1=W, y1=H;
   if (Array.isArray(box) && box.length===4) {
     var b=box.map(Number);
@@ -1429,7 +1429,7 @@ function cropRotate(src, box, top, max){
       if ((x1-x0)*(y1-y0) < W*H*0.03) { x0=0; y0=0; x1=W; y1=H; }
     }
   }
-  var cw=x1-x0, ch=y1-y0, rot = top==='left' ? 90 : (top==='right' ? -90 : (top==='down' ? 180 : 0));
+  var cw=x1-x0, ch=y1-y0, rot = typeof rotDeg==='number' ? rotDeg : (top==='left' ? 90 : (top==='right' ? -90 : (top==='down' ? 180 : 0)));
   var sw = rot%180 ? ch : cw, sh = rot%180 ? cw : ch, s=Math.min(1, max/Math.max(sw,sh));
   var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(sw*s)); c.height=Math.max(1,Math.round(sh*s));
   var x=c.getContext('2d'); x.translate(c.width/2, c.height/2); x.rotate(rot*Math.PI/180); x.drawImage(src, x0, y0, cw, ch, -cw*s/2, -ch*s/2, cw*s, ch*s);
@@ -1450,7 +1450,10 @@ function bookPhoto(file, side, full){
     var aiFail=null, pAi = (SANDBOX || typeof readBookPhoto!=='function') ? Promise.resolve({}) : readBookPhoto(aiUrl, side).catch(function(e){ aiFail=e; return {}; });
     return Promise.all([pBar, pAi]).then(function(r){
       if (!draft || draft.id!==id) return;
-      var info=r[1]||{}, c=cropRotate(big, info.box, info.top, ui[1]);
+      var info=r[1]||{}, rd=null, A={right:0,down:90,left:180,up:270};
+      /* Buchrücken aufrecht stellen: Deutsch & Co. liest man von unten nach oben, Englisch von oben nach unten */
+      if (side==='spineImg' && info.read in A) rd = ((/^en/i.test(info.lang||'') ? 90 : 270) - A[info.read] + 360) % 360;
+      var c=cropRotate(big, info.box, info.top, ui[1], rd);
       draft[side]=c.toDataURL('image/jpeg', .82);
       if ((side==='cover' || (side==='spineImg' && !draft.cover)) && draft._auto!==false) try { draft.color=avgColor(c); } catch(e){}
       st.textContent='✓'; readForm();
@@ -2343,7 +2346,7 @@ function isbnOk(s){ s=String(s||'').replace(/[^0-9X]/gi,'').toUpperCase(); if (s
 var PHOTO_PROMPTS={
   back:'Das ist ein Foto der RÜCKSEITE eines Buchs. Antworte NUR mit JSON: {"isbn":"die ISBN-13 (nur Ziffern; steht meist über oder unter dem Strichcode und beginnt mit 978 oder 979) oder leer","title":"Buchtitel, falls erkennbar","author":"Autor:in, falls erkennbar","blurb":"der Klappentext WÖRTLICH und vollständig, Absätze mit \\n getrennt. Lass Rezensionszitate von Zeitungen/Personen, Preis, Verlag, ISBN und Webadressen weg.","box":[ymin,xmin,ymax,xmax],"top":"up|down|left|right"}. box = Umriss des Buchs im Bild, Werte 0 bis 1000. top = in welche Richtung die Oberkante des Buchs im Bild zeigt.',
   cover:'Das ist ein Foto der VORDERSEITE (Cover) eines Buchs. Antworte NUR mit JSON: {"title":"Buchtitel","author":"Autor:in","box":[ymin,xmin,ymax,xmax],"top":"up|down|left|right"}. box = Umriss des Buchs im Bild, Werte 0 bis 1000. top = in welche Richtung die Oberkante des Buchs zeigt.',
-  spineImg:'Das ist ein Foto vom BUCHRÜCKEN eines einzelnen Buchs. Antworte NUR mit JSON: {"title":"Buchtitel","author":"Autor:in","box":[ymin,xmin,ymax,xmax],"top":"up|down|left|right"}. box = Umriss NUR dieses Buchrückens im Bild, Werte 0 bis 1000. top = in welche Richtung die Oberkante des Buchs zeigt (bei deutschen Büchern läuft die Schrift auf dem Rücken meist von unten nach oben).'
+  spineImg:'Das ist ein Foto vom BUCHRÜCKEN eines einzelnen Buchs. Antworte NUR mit JSON: {"title":"Buchtitel","author":"Autor:in","box":[ymin,xmin,ymax,xmax],"read":"right|left|up|down","lang":"de|en|…"}. box = Umriss NUR dieses Buchrückens im Bild, Werte 0 bis 1000. read = in welche Richtung im Bild die Titelschrift läuft (Leserichtung, z. B. right wenn man den Titel ohne Drehen normal lesen kann). lang = Sprache des Titels.'
 };
 function readBookPhoto(dataUrl, side){
   return aiAsk([PHOTO_PROMPTS[side]||PHOTO_PROMPTS.back, {inlineData:{data:dataUrl.split(',')[1], mimeType:'image/jpeg'}}]).then(aiJSON).then(function(o){ o=o||{}; o.isbn=isbnOk(o.isbn); return o; });
