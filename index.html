@@ -2177,7 +2177,8 @@ function getAiModel(){
   aiModelP.catch(function(){ aiModelP=null; });
   return aiModelP;
 }
-var AI_MODELS=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'];
+var AI_MODELS=['gemini-flash-lite-latest','gemini-flash-latest','gemini-3.8-flash'];
+function withTimeout(p, ms){ return Promise.race([p, new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, ms); })]); }
 function recognizeSpines(dataUrl){
   var b64=dataUrl.split(',')[1];
   var prompt='Auf diesem Foto stehen Bücher in einem Regal (meist sieht man nur die Buchrücken). Lies jeden erkennbaren Buchrücken von links nach rechts und von oben nach unten. Gib NUR ein JSON-Array zurück, ein Objekt pro Buch: {"title": "...", "author": "..."} (author leer lassen, wenn nicht lesbar). Keine Duplikate, keine Erklärungen. Wenn ein Titel nur teilweise lesbar ist, gib den lesbaren Teil an.';
@@ -2185,7 +2186,7 @@ function recognizeSpines(dataUrl){
     var i=0;
     function attempt(){
       var model = r.ai.getGenerativeModel(r.inst, {model:AI_MODELS[i], generationConfig:{responseMimeType:'application/json', temperature:0.1}});
-      return model.generateContent([prompt, {inlineData:{data:b64, mimeType:'image/jpeg'}}]).then(function(res){
+      return withTimeout(model.generateContent([prompt, {inlineData:{data:b64, mimeType:'image/jpeg'}}]), 45000).then(function(res){
         var t = res.response.text(); var m = t.match(/\[[\s\S]*\]/); var arr = JSON.parse(m ? m[0] : t);
         return (Array.isArray(arr)?arr:[]).filter(function(x){ return x && x.title; }).map(function(x){ return {title:String(x.title).trim(), author:String(x.author||'').trim()}; });
       }).catch(function(e){ if (++i < AI_MODELS.length && !/quota|429|permission|PERMISSION|API_NOT|not been used|disabled/i.test(String(e && e.message))) return attempt(); throw e; });
@@ -2198,6 +2199,7 @@ function aiErr(e){
   if (/nocfg/.test(m)) return 'Dafür muss die Online-Verbindung eingerichtet sein (☁️ Teilen).';
   if (/quota|429|RESOURCE_EXHAUSTED/i.test(m)) return 'Das kostenlose Tageskontingent der Bilderkennung ist aufgebraucht – morgen geht es wieder.';
   if (/not been used|disabled|API_NOT|firebasevertexai|firebaseml|AI Logic/i.test(m)) return 'Die Bilderkennung ist in Firebase noch nicht eingeschaltet (AI Logic).';
+  if (/timeout/.test(m)) return 'Die Bilderkennung antwortet gerade nicht – probier es gleich nochmal.';
   if (/Failed to fetch|network|import/i.test(m)) return 'Keine Internetverbindung.';
   return 'Die Erkennung hat nicht geklappt: '+m.slice(0,140);
 }
