@@ -226,6 +226,12 @@ body.dragging .level.drop-over{outline-color:rgba(255,255,255,.45);outline-offse
 .stars{display:flex;gap:2px;margin-bottom:16px}
 .star{border:0;background:none;font-size:26px;cursor:pointer;color:#d8cfc3;padding:0 1px;line-height:1}
 .star.on{color:#e0a526}
+.star{background:linear-gradient(90deg,#e0a526 var(--f,0%),#d8cfc3 var(--f,0%));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ratebox{margin-bottom:16px}
+.ratebox .stars{margin-bottom:4px;align-items:center}
+.rateval{font-weight:700;font-size:18px;margin-left:8px;min-width:2.2em;color:#2a2420}
+.raterange{width:100%;max-width:240px;accent-color:#e0a526}
+body.readonly .raterange{display:none}
 .meta{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin:0 0 16px}
 .meta dt{color:var(--muted)}.meta dd{margin:0}
 .notes{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;white-space:pre-wrap;margin-bottom:18px}
@@ -1053,10 +1059,20 @@ function openView(id, flip){
   renderDetails(b);
   $('ovView').classList.add('open');
 }
+/* Bewertung mit einer Nachkommastelle (z. B. 4,3) */
+function fmtR(r){ return (Math.round((+r||0)*10)/10).toFixed(1).replace('.',','); }
+function starFill(r,i){ return Math.round(Math.max(0,Math.min(1,(+r||0)-(i-1)))*100)+'%'; }
+function rateBoxHTML(r, starAttr, rangeAttr, label){
+  var h='<div class="ratebox"><div class="stars">';
+  for (var i=1;i<=5;i++) h+='<button type="button" class="star" style="--f:'+starFill(r,i)+'" '+starAttr+'="'+i+'" aria-label="'+i+' Sterne">★</button>';
+  h+='<span class="rateval">'+(r?fmtR(r):'–')+'</span>'+(label?'<span class="hint" style="align-self:center;margin-left:6px">'+label+'</span>':'')+'</div>';
+  return h+'<input type="range" class="raterange" min="0" max="5" step="0.1" value="'+(+r||0)+'" '+rangeAttr+'="1" aria-label="Bewertung genau einstellen (0 bis 5)"></div>';
+}
+function paintRate(box, v){ if (!box) return; box.querySelectorAll('.star').forEach(function(s,i){ s.style.setProperty('--f', starFill(v,i+1)); }); var l=box.querySelector('.rateval'); if (l) l.textContent = v ? fmtR(v) : '–'; }
 function fmtDate(d){ return d ? new Date(d+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'}) : ''; }
 function daysBetween(a,b){ return Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/864e5); }
 function renderDetails(b){
-  var stars=''; for(var i=1;i<=5;i++) stars += '<button type="button" class="star'+(i<=(b.rating||0)?' on':'')+'" data-star="'+i+'" aria-label="'+i+' Sterne">★</button>';
+  var stars=rateBoxHTML(b.rating||0, 'data-star', 'data-rate', '');
   var meta = '';
   if (b.pages) meta += '<dt>Seiten</dt><dd>'+esc(b.pages)+'</dd>';
   if (b.started) meta += '<dt>Angefangen</dt><dd>'+esc(fmtDate(b.started))+'</dd>';
@@ -1066,7 +1082,7 @@ function renderDetails(b){
   if (b.isbn) meta += '<dt>ISBN</dt><dd>'+esc(b.isbn)+'</dd>';
   $('details').innerHTML = '<h2>'+esc(b.title)+'</h2><div class="by">'+(b.author?esc(b.author):'&nbsp;')+'</div>'+
     '<div class="pills">'+['want','reading','read'].map(function(s){return '<button type="button" class="pill'+(b.status===s?' on':'')+'" data-status="'+s+'">'+STATUS[s]+'</button>';}).join('')+'</div>'+
-    (activeClub?'':'<div class="stars">'+stars+'</div>')+(meta?'<dl class="meta">'+meta+'</dl>':'')+
+    (activeClub?'':stars)+(meta?'<dl class="meta">'+meta+'</dl>':'')+
     '<div class="notes">'+esc(b.notes||'')+'</div>'+(activeClub?clubDetailsHTML(b):'')+
     '<div class="actions"><button class="btn" data-act="edit">✎ Bearbeiten</button><button class="btn danger" data-act="del">Löschen</button></div>';
 }
@@ -1872,7 +1888,7 @@ function renderStats(){
   h += '<div class="card"><h3>'+(statYear==='all'?'Pro Jahr':'Pro Monat '+statYear)+'<span class="chips"><button type="button" class="chip'+(statMetric==='books'?' on':'')+'" data-metric="books">Bücher</button><button type="button" class="chip'+(statMetric==='pages'?' on':'')+'" data-metric="pages">Seiten</button></span></h3>'+barChart(vals, labels, unit)+'</div>';
   var authors={}; list.forEach(function(b){ (b.author||'Unbekannt').split(/,\s*/).forEach(function(a){ authors[a]=(authors[a]||0)+1; }); });
   var topA = Object.keys(authors).map(function(a){ return [a, authors[a]]; }).sort(function(a,b){ return b[1]-a[1] || a[0].localeCompare(b[0]); }).slice(0,6);
-  var rd = [5,4,3,2,1].map(function(r){ return ['★★★★★'.slice(0,r), list.filter(function(b){ return b.rating===r; }).length]; });
+  var rd = [5,4,3,2,1].map(function(r){ return ['★★★★★'.slice(0,r), list.filter(function(b){ return b.rating && Math.round(b.rating)===r; }).length]; });
   h += '<div class="grid2c"><div class="card"><h3>Lieblings-Autor:innen</h3>'+(topA.length?hbars(topA,'Bücher'):'<p class="hint">Noch keine Daten.</p>')+'</div><div class="card"><h3>Deine Bewertungen</h3>'+(rated.length?hbars(rd,'Bücher'):'<p class="hint">Noch keine Bewertungen.</p>')+'</div></div>';
   if (list.length) {
     var byP = withP.slice().sort(function(a,b){ return b.pages-a.pages; });
@@ -1882,14 +1898,14 @@ function renderStats(){
       (byP[0]?recCard(byP[0],'Dickstes Buch · '+byP[0].pages+' Seiten'):'')+
       (byP.length>1?recCard(byP[byP.length-1],'Dünnstes Buch · '+byP[byP.length-1].pages+' Seiten'):'')+
       (fast[0]?recCard(fast[0],'Am schnellsten gelesen · '+Math.round(fast[0].pages/(daysBetween(fast[0].started,fast[0].date)+1))+' Seiten/Tag'):'')+
-      (best[0]?recCard(best[0],'Am besten bewertet · '+'★'.repeat(best[0].rating)):'')+'</div></div>';
+      (best[0]?recCard(best[0],'Am besten bewertet · ★ '+fmtR(best[0].rating)):'')+'</div></div>';
   }
   var want = state.books.filter(function(b){ return b.status==='want'; }), wantP = want.reduce(function(s,b){ return s+(+b.pages||0); },0);
   var thisYear = all.filter(function(b){ return +b.date.slice(0,4)===yNow; }).length, monthsGone = new Date().getMonth()+1, pace = thisYear/monthsGone;
   h += '<div class="card"><h3>Wunschliste</h3><p style="margin:0;font-size:14px"><b>'+want.length+'</b> Bücher mit zusammen <b>'+wantP.toLocaleString('de-DE')+'</b> Seiten warten auf dich.'+(want.length && pace>0 ? ' Bei deinem Tempo dieses Jahr ('+String(Math.round(pace*10)/10).replace('.',',')+' Bücher/Monat) hättest du sie in etwa <b>'+Math.ceil(want.length/pace)+' Monaten</b> durch.' : '')+'</p></div>';
   var sortedL = list.slice().sort(function(a,b){ return a.date<b.date?1:-1; }), groups={}, order=[];
   sortedL.forEach(function(b){ var k=b.date.slice(0,7); if(!groups[k]){ groups[k]=[]; order.push(k); } groups[k].push(b); });
-  h += '<div class="card"><h3>Rückblick: Was du wann gelesen hast</h3>'+(order.length ? order.map(function(k){ return '<div class="tl-month">'+MONTHS_L[+k.slice(5,7)-1]+' '+k.slice(0,4)+' · '+groups[k].length+'</div><div class="tl-items">'+groups[k].map(function(b){ return recCard(b, fmtDate(b.date)+(b.rating?' · '+'★'.repeat(b.rating):'')); }).join('')+'</div>'; }).join('') : '<p class="hint">Sobald du Bücher als „Gelesen“ markierst, erscheinen sie hier.</p>')+'</div>';
+  h += '<div class="card"><h3>Rückblick: Was du wann gelesen hast</h3>'+(order.length ? order.map(function(k){ return '<div class="tl-month">'+MONTHS_L[+k.slice(5,7)-1]+' '+k.slice(0,4)+' · '+groups[k].length+'</div><div class="tl-items">'+groups[k].map(function(b){ return recCard(b, fmtDate(b.date)+(b.rating?' · ★ '+fmtR(b.rating):'')); }).join('')+'</div>'; }).join('') : '<p class="hint">Sobald du Bücher als „Gelesen“ markierst, erscheinen sie hier.</p>')+'</div>';
   var box=$('statsbox'), sh=$('ovStats').querySelector('.sheet'), sc=sh.scrollTop, focusGoal = document.activeElement && document.activeElement.id==='goalInput';
   box.innerHTML = h; sh.scrollTop = sc;
   if (focusGoal) { var gi=$('goalInput'); gi.focus(); }
@@ -2194,11 +2210,11 @@ function switchTo(key){
   });
 }
 /* Mitglieds-Funktionen */
-function setMyRating(bookId, r){
+function setMyRating(bookId, r, exact){
   var c=clubs[activeClub]; if (!c) return;
   var id=bookId+'__'+CLOUD.uid, ref=CLOUD.db.collection('s').doc(c.key).collection('ratings').doc(id);
   var cur = c.ratings[id] && c.ratings[id].r;
-  if (cur===r) { delete c.ratings[id]; ref.delete(); } else { c.ratings[id]={bookId:bookId, uid:CLOUD.uid, name:myName(), r:r}; ref.set(c.ratings[id]); }
+  if (cur===r && !exact) { delete c.ratings[id]; ref.delete(); } else { c.ratings[id]={bookId:bookId, uid:CLOUD.uid, name:myName(), r:r}; ref.set(c.ratings[id]); }
   refreshClubDetails();
 }
 function addComment(bookId, text){
@@ -2262,8 +2278,8 @@ function clubDetailsHTML(b){
   var mine=(c.ratings[b.id+'__'+CLOUD.uid]||{}).r||0, isB=(c.main.botm||{}).bookId===b.id;
   var cm=Object.keys(c.comments).map(function(k){ var x=c.comments[k]; x._id=k; return x; }).filter(function(x){ return x.bookId===b.id; }).sort(function(a,b){ return a.at-b.at; });
   var h='<div class="clubsec"><button class="btn small'+(isB?' primary':'')+'" data-act="botm">'+(isB?'⭐ Buch des Monats':'⭐ Als Buch des Monats')+'</button>';
-  h+='<h4>Bewertungen im Club'+(rs.length?' · Ø '+avg.toFixed(1).replace('.',',')+' ★':'')+'</h4><div class="stars">'+[1,2,3,4,5].map(function(i){ return '<button type="button" class="star'+(i<=mine?' on':'')+'" data-mystar="'+i+'" aria-label="'+i+' Sterne">★</button>'; }).join('')+'<span class="hint" style="align-self:center;margin-left:6px">deine Wertung</span></div>';
-  if (rs.length) h+='<div class="rlist">'+rs.map(function(r){ return '<span>'+esc(memberName(c, r.uid, r.name))+' '+'★'.repeat(r.r)+'</span>'; }).join('')+'</div>';
+  h+='<h4>Bewertungen im Club'+(rs.length?' · Ø '+avg.toFixed(1).replace('.',',')+' ★':'')+'</h4>'+rateBoxHTML(mine, 'data-mystar', 'data-myrate', 'deine Wertung');
+  if (rs.length) h+='<div class="rlist">'+rs.map(function(r){ return '<span>'+esc(memberName(c, r.uid, r.name))+' ★ '+fmtR(r.r)+'</span>'; }).join('')+'</div>';
   h+='<h4>Diskussion ('+cm.length+')</h4><div class="comments">'+cm.map(function(x){ return '<div class="cmt"><b>'+esc(memberName(c, x.uid, x.name))+'</b> <small>'+esc(new Date(x.at).toLocaleString('de-DE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+'</small>'+(x.uid===CLOUD.uid?'<button class="xbtn" data-delcmt="'+esc(x._id)+'" aria-label="Löschen">×</button>':'')+'<p>'+esc(x.text)+'</p></div>'; }).join('')+'</div>';
   h+='<div class="cmtnew"><textarea id="cmtText" maxlength="2000" placeholder="Was denkst du über das Buch? (Achtung: Spoiler 😉)"></textarea><button class="btn small primary" data-act="cmtsend">Senden</button></div></div>';
   return h;
@@ -2643,6 +2659,7 @@ document.addEventListener('click', function(e){
 document.addEventListener('input', function(e){
   var t=e.target;
   if (t.id==='search') { render(); renderZoom(); return; }
+  if (t.dataset && (t.dataset.rate || t.dataset.myrate)) { paintRate(t.closest('.ratebox'), Math.round(parseFloat(t.value)*10)/10); return; }
   if (t.id==='f-color' && draft) { draft.color=t.value; draft._auto=false; readForm(); previewSpine(); return; }
   if (t.id==='d-title') { state.settings.title=t.value; designDirty=true; applyLook(); return; }
   if (t.id==='d-wall') { state.settings.wall=t.value; designDirty=true; applyLook(); return; }
@@ -2653,6 +2670,8 @@ document.addEventListener('input', function(e){
 });
 document.addEventListener('change', function(e){
   var t=e.target;
+  if (t.dataset && t.dataset.rate && viewId) { var rb=bookById(viewId); if (rb) { rb.rating=Math.round(parseFloat(t.value)*10)/10; refreshAll(); persist(); } return; }
+  if (t.dataset && t.dataset.myrate && viewId) { var mv=Math.round(parseFloat(t.value)*10)/10; if (mv) setMyRating(viewId, mv, true); return; }
   if (t.id==='upFront') { var f1=t.files[0]; t.value=''; if (SANDBOX) handleUpload(f1,'cover'); else bookPhoto(f1,'cover'); return; }
   if (t.id==='upBack') { var f2=t.files[0]; t.value=''; if (SANDBOX) handleUpload(f2,'back'); else bookPhoto(f2,'back'); return; }
   if (t.id==='upSpine') { var f3=t.files[0]; t.value=''; if (SANDBOX) { if (f3) storeImage(f3, 900).then(function(r){ if(draft){ draft.spineImg=r.url; readForm(); refreshEdit(); } }); } else bookPhoto(f3,'spineImg'); return; }
