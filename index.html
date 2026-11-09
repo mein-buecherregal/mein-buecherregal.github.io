@@ -449,7 +449,29 @@ ol.steps code{background:#f1ebe2;padding:1px 5px;border-radius:4px;font-size:12p
 .swi.on{border-color:#2a2420;box-shadow:inset 0 0 0 1px #2a2420;font-weight:600}
 .ctxbar,.clubbar{max-width:1140px;margin:10px auto 0;background:var(--panel);border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:10px 14px;font-size:14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
 #ctxBanner,#clubPanel{padding:0 20px}
-.clubgrid{max-width:1140px;margin:12px auto 0;display:grid;grid-template-columns:1fr 1.4fr;gap:12px}
+.clubgrid{max-width:1140px;margin:12px auto 0;display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
+.mchips{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px}
+.mchip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:999px;padding:3px 11px 3px 3px;font:inherit;font-size:13px;color:#2a2420;line-height:1.2}
+button.mchip{cursor:pointer}
+.mchip.me{border-color:#c97c2a;box-shadow:inset 0 0 0 1px #c97c2a}
+.mchip i{font-style:normal;color:#8a5a30}
+.avatar{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex:none;text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.botm2{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:start}
+.botmcover{width:96px;aspect-ratio:2/3;border:0;border-radius:3px 5px 5px 3px;background-size:cover;background-position:center;box-shadow:0 6px 16px rgba(0,0,0,.3);cursor:pointer;padding:0}
+.botminfo .bt{display:block;font-family:var(--head);font-size:19px;line-height:1.2}
+.botminfo small{display:block;color:#6f655c;margin:3px 0 10px}
+.botmprog{margin-top:16px;border-top:1px solid rgba(0,0,0,.08);padding-top:12px}
+.botmprog h4{margin:0 0 14px;font-size:15px}
+.race{display:flex;flex-direction:column;gap:16px;margin-bottom:14px}
+.racerow{display:grid;grid-template-columns:minmax(60px,max-content) 1fr 70px;gap:10px;align-items:center;font-size:13px}
+.rname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.rname i{font-weight:400;color:#6f655c;font-style:normal}
+.rtrack{position:relative;height:10px;border-radius:6px;background:#ece4d6;margin:0 14px}
+.rfill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;transition:width .5s}
+.ravatar{position:absolute;top:50%;width:28px;height:28px;border-radius:50%;transform:translate(-50%,-50%);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:left .5s}
+.rval{text-align:right;font-weight:700;line-height:1.15}
+.rval small{display:block;font-weight:400;color:#6f655c;font-size:11px}
+.raceavg{font-size:12px;color:#6f655c;text-align:right}
 .clubgrid .card{margin:0;color:#2a2420}
 .botm .rec{width:100%;margin-bottom:10px}
 .meet{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -2273,10 +2295,30 @@ function setMyProgress(bookId, pct, page){
   var c=clubs[activeClub]; if (!c) return; c.progress=c.progress||{};
   var id=bookId+'__'+CLOUD.uid, ref=CLOUD.db.collection('s').doc(c.key).collection('progress').doc(id);
   c.progress[id]={bookId:bookId, uid:CLOUD.uid, name:myName(), pct:Math.round(pct*10)/10, page:page||0, at:Date.now()};
-  ref.set(c.progress[id]); renderClubPanel(); refreshClubDetails(); render();
+  ref.set(c.progress[id]); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); renderClubPanel(); refreshClubDetails(); render();
   if (pct>=100) toast('🎉 Fertig gelesen!');
 }
 function clubProgressList(c, bookId){ var p=c.progress||{}; return Object.keys(p).map(function(k){ return p[k]; }).filter(function(x){ return x && x.bookId===bookId && +x.pct>0; }).sort(function(a,b){ return b.pct-a.pct; }); }
+function avatarHTML(c, uid, name){ var n=memberName(c, uid, name); if (uid===CLOUD.uid && !myName()) n='?'; return '<span class="avatar" style="background:'+memberColor(uid)+'">'+esc((n||'?').trim().charAt(0).toUpperCase()||'?')+'</span>'; }
+/* Lesefortschritt aller Mitglieder als "Wettlauf"-Balken */
+function raceHTML(c, b){
+  var pages=+b.pages||0, me=CLOUD.uid, uids=Object.keys(c.members); if (me && uids.indexOf(me)<0) uids.push(me);
+  clubProgressList(c, b.id).forEach(function(x){ if (uids.indexOf(x.uid)<0) uids.push(x.uid); });
+  var rows=uids.map(function(u){ var p=(c.progress||{})[b.id+'__'+u]||{}; return {uid:u, pct:Math.min(100,+p.pct||0), page:+p.page||0, name:p.name}; }).sort(function(a,x){ return x.pct-a.pct; });
+  var avg=rows.length ? rows.reduce(function(s,r){ return s+r.pct; },0)/rows.length : 0, done=rows.filter(function(r){ return r.pct>=100; }).length;
+  return '<div class="race">'+rows.map(function(r){ var col=memberColor(r.uid), nm=(r.uid===me && !myName()) ? 'Du' : memberName(c, r.uid, r.name);
+    return '<div class="racerow"><span class="rname">'+esc(nm)+(r.uid===me && myName()?' <i>(du)</i>':'')+'</span><span class="rtrack"><span class="rfill" style="width:'+r.pct.toFixed(1)+'%;background:'+col+'"></span><span class="ravatar" style="left:'+r.pct.toFixed(1)+'%;background:'+col+'">'+esc((nm||'?').trim().charAt(0).toUpperCase())+'</span></span><span class="rval">'+(r.pct>=100?'🎉 fertig':Math.round(r.pct)+' %')+(pages && r.page && r.pct<100 ? '<small>S. '+r.page+' / '+pages+'</small>' : '')+'</span></div>'; }).join('')+
+    '<div class="raceavg">Ø Club: '+Math.round(avg)+' %'+(done?' · '+done+' fertig 🎉':'')+'</div></div>';
+}
+function setMyName(n){
+  n=String(n||'').trim().slice(0,40); if (!n) return Promise.resolve();
+  cloudMeta.myName=n; saveMeta();
+  Object.keys(clubs).forEach(function(k){ var c=clubs[k]; if (c && c.members) c.members[CLOUD.uid]=Object.assign({}, c.members[CLOUD.uid]||{}, {name:n}); });
+  renderClubPanel(); refreshClubDetails();
+  return cloudInit().then(function(){
+    return Promise.all(cloudMeta.clubs.map(function(e){ return CLOUD.db.collection('s').doc(e.key).collection('members').doc(CLOUD.uid).set({name:n}, {merge:true}).catch(function(){}); }));
+  }).then(function(){ toast('✓ Dein Name: '+n); }).catch(function(){});
+}
 function progListHTML(c, list){
   return '<div class="proglist">'+list.map(function(x){ var col=memberColor(x.uid); return '<div class="progrow"><span class="pdot" style="background:'+col+'"></span><span class="pname">'+esc(memberName(c, x.uid, x.name))+(x.uid===CLOUD.uid?' (du)':'')+'</span><span class="progbar small"><i style="width:'+Math.min(100,+x.pct).toFixed(1)+'%;background:'+col+'"></i></span><span class="pval">'+(+x.pct>=100?'✓ fertig':Math.round(x.pct)+' %')+'</span></div>'; }).join('')+'</div>';
 }
@@ -2319,11 +2361,17 @@ function renderClubPanel(){
   var el=$('clubPanel'); if (!el) return;
   if (!activeClub || !clubs[activeClub]) { el.innerHTML=''; return; }
   var c=clubs[activeClub], members=Object.keys(c.members), botm=c.main.botm||{}, b=botm.bookId && c.books[botm.bookId];
-  var h='<div class="clubbar"><div><b>👥 '+esc(c.main.name||'Buchclub')+'</b> · '+members.length+' '+(members.length===1?'Mitglied':'Mitglieder')+': <span class="hint">'+members.map(function(u){ return esc(memberName(c,u)); }).join(', ')+'</span></div><div class="actions"><button class="btn small primary" data-act="clubinvite">🔗 Freunde einladen</button><button class="btn small" data-act="clubleave">Verlassen</button></div></div>';
+  var me=CLOUD.uid; if (me && members.indexOf(me)<0) members.push(me);
+  members.sort(function(a,x){ return (a===me?-1:x===me?1:0) || memberName(c,a).localeCompare(memberName(c,x),'de'); });
+  var chips=members.map(function(u){ var mine=u===me, nm=mine&&!myName() ? 'Du (ohne Namen)' : memberName(c,u); return (mine?'<button type="button" class="mchip me" data-act="rename" title="Deinen Namen ändern">':'<span class="mchip">')+avatarHTML(c,u)+'<span>'+esc(nm)+(mine?' <i>(du) ✎</i>':'')+'</span>'+(mine?'</button>':'</span>'); }).join('');
+  var h='<div class="clubbar"><div><b>👥 '+esc(c.main.name||'Buchclub')+'</b> · '+members.length+' '+(members.length===1?'Mitglied':'Mitglieder')+'</div><div class="actions">'+(myName()?'':'<button class="btn small primary" data-act="rename">✎ Deinen Namen eintragen</button>')+'<button class="btn small'+(myName()?' primary':'')+'" data-act="clubinvite">🔗 Freunde einladen</button><button class="btn small" data-act="clubleave">Verlassen</button></div><div class="mchips">'+chips+'</div></div>';
   h+='<div class="clubgrid"><div class="card"><h3>⭐ Buch des Monats</h3>';
-  if (b) h+='<div class="botm"><button type="button" class="rec" data-openbook="'+esc(b.id)+'"><span class="mini" style="'+miniCover(b)+'"></span><span><b>'+esc(b.title)+'</b><small>'+esc(b.author||'')+'</small></span></button><div class="meet"><label class="f">Nächstes Treffen<input type="datetime-local" id="botmWhen" value="'+esc(botm.when||'')+'"></label><label class="f">Ort<input type="text" id="botmWhere" maxlength="80" placeholder="z. B. bei Lena, Café Mondschein" value="'+esc(botm.where||'')+'"></label></div>'+(botm.when?'<p class="hint" style="margin:6px 0 0">📅 '+esc(new Date(botm.when).toLocaleString('de-DE',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}))+(botm.where?' · 📍 '+esc(botm.where):'')+'</p>':'')+'</div>';
+  if (b) {
+    var cpm=(c.progress||{})[b.id+'__'+me]||{};
+    h+='<div class="botm2"><button type="button" class="botmcover" data-openbook="'+esc(b.id)+'" style="'+miniCover(b)+'" aria-label="Buch öffnen"></button><div class="botminfo"><b class="bt">'+esc(b.title)+'</b><small>'+esc(b.author||'')+(b.pages?' · '+esc(b.pages)+' Seiten':'')+'</small><div class="meet"><label class="f">Nächstes Treffen<input type="datetime-local" id="botmWhen" value="'+esc(botm.when||'')+'"></label><label class="f">Ort<input type="text" id="botmWhere" maxlength="80" placeholder="z. B. bei Lena, Café Mondschein" value="'+esc(botm.where||'')+'"></label></div>'+(botm.when?'<p class="hint" style="margin:6px 0 0">📅 '+esc(new Date(botm.when).toLocaleString('de-DE',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}))+(botm.where?' · 📍 '+esc(botm.where):'')+'</p>':'')+'</div></div>';
+    h+='<div class="botmprog"><h4>📖 Wie weit seid ihr?</h4>'+raceHTML(c, b)+progBoxHTML(+cpm.pct||0, +cpm.page||0, +b.pages||0, 'c', '📖 Dein Stand').replace('class="progbox"', 'class="progbox" data-bid="'+esc(b.id)+'"')+'</div>';
+  }
   else h+='<p class="hint" style="margin:0">Öffne ein Buch und tippe auf „⭐ Als Buch des Monats“.</p>';
-  if (b) { var PL=clubProgressList(c, b.id); h+='<h4 style="margin:12px 0 6px">📖 Wie weit seid ihr?</h4>'+(PL.length ? progListHTML(c, PL) : '<p class="hint" style="margin:0">Noch niemand hat Fortschritt eingetragen – öffne das Buch und stell deine Seite ein.</p>'); }
   h+='</div><div class="card"><h3>🗳 Abstimmung: Was lesen wir als Nächstes?</h3>';
   var props=Object.keys(c.books).map(function(k){ return c.books[k]; }).filter(function(x){ return x.status==='want'; });
   var allVotes=Object.keys(c.votes).map(function(u){ return {uid:u, v:c.votes[u]}; });
@@ -2331,8 +2379,8 @@ function renderClubPanel(){
   if (!props.length) h+='<p class="hint" style="margin:0">Noch keine Vorschläge. Bücher im Regal „Will ich lesen“ stehen hier automatisch zur Wahl.</p>';
   else { var max=Math.max.apply(null, props.map(function(p){ return p.who.length; }).concat([1])); h+='<div class="votes">'+props.map(function(p){ var mine=p.who.some(function(x){ return x.uid===CLOUD.uid; }); return '<div class="vote"><button type="button" class="vtitle" data-openbook="'+esc(p.b.id)+'"><span class="mini" style="'+miniCover(p.b)+'"></span><span><b>'+esc(p.b.title)+'</b><small>'+(p.who.length?esc(p.who.map(function(x){ return memberName(c,x.uid,x.v.name); }).join(', ')):'noch keine Stimme')+'</small></span></button><span class="vbar"><i style="width:'+(p.who.length/max*100).toFixed(0)+'%"></i></span><b class="vn">'+p.who.length+'</b><button type="button" class="btn small'+(mine?' primary':'')+'" data-vote="'+esc(p.b.id)+'">'+(mine?'✓ Gestimmt':'👍 Stimmen')+'</button></div>'; }).join('')+'</div>'; }
   h+='<button class="btn small" data-act="add" style="margin-top:10px">＋ Buch vorschlagen</button></div></div>';
-  var focus = document.activeElement && (document.activeElement.id==='botmWhere' || document.activeElement.id==='botmWhen') ? document.activeElement.id : null;
-  if (focus) return;
+  var ae=document.activeElement;
+  if (ae && el.contains(ae) && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
   el.innerHTML=h;
 }
 function refreshClubDetails(){ if (viewId && $('ovView').classList.contains('open')) { var b=bookById(viewId); if (b) renderDetails(b); } }
@@ -2343,7 +2391,7 @@ function clubDetailsHTML(b){
   var cm=Object.keys(c.comments).map(function(k){ var x=c.comments[k]; x._id=k; return x; }).filter(function(x){ return x.bookId===b.id; }).sort(function(a,b){ return a.at-b.at; });
   var h='<div class="clubsec"><button class="btn small'+(isB?' primary':'')+'" data-act="botm">'+(isB?'⭐ Buch des Monats':'⭐ Als Buch des Monats')+'</button>';
   var cpm=(c.progress||{})[b.id+'__'+CLOUD.uid]||{}, cpl=clubProgressList(c, b.id);
-  h+=progBoxHTML(+cpm.pct||0, +cpm.page||0, +b.pages||0, 'c', '📖 Dein Lesefortschritt')+(cpl.length?'<h4>Fortschritt im Club</h4>'+progListHTML(c, cpl):'');
+  h+=progBoxHTML(+cpm.pct||0, +cpm.page||0, +b.pages||0, 'c', '📖 Dein Lesefortschritt')+'<h4>Fortschritt im Club</h4>'+raceHTML(c, b);
   h+='<h4>Bewertungen im Club'+(rs.length?' · Ø '+avg.toFixed(1).replace('.',',')+' ★':'')+'</h4>'+rateBoxHTML(mine, 'data-mystar', 'data-myrate', 'deine Wertung');
   if (rs.length) h+='<div class="rlist">'+rs.map(function(r){ return '<span>'+esc(memberName(c, r.uid, r.name))+' ★ '+fmtR(r.r)+'</span>'; }).join('')+'</div>';
   h+='<h4>Diskussion ('+cm.length+')</h4><div class="comments">'+cm.map(function(x){ return '<div class="cmt"><b>'+esc(memberName(c, x.uid, x.name))+'</b> <small>'+esc(new Date(x.at).toLocaleString('de-DE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+'</small>'+(x.uid===CLOUD.uid?'<button class="xbtn" data-delcmt="'+esc(x._id)+'" aria-label="Löschen">×</button>':'')+'<p>'+esc(x.text)+'</p></div>'; }).join('')+'</div>';
@@ -2572,6 +2620,7 @@ function errToast(e){ if (e && e.message==='cancel') return; var m=e && e.messag
 var CLOUD_ACTS = {
   cloud: function(){ loadSharedCfg().then(function(){ if ($('ovCloud').classList.contains('open')) renderCloud(); }); renderCloud(); $('ovCloud').classList.add('open'); $('ovCloud').querySelector('.sheet').scrollTop=0; },
   ctxmenu: function(){ renderSwitch(); $('ovSwitch').classList.add('open'); },
+  rename: function(){ askText('Dein Name', 'So sehen dich die anderen in deinen Buchclubs.', myName(), 'Dein Vorname', 'Speichern').then(function(n){ if (n && n.trim()) setMyName(n); }); },
   copyrules: function(){ var r=$('rulesTxt'); try { navigator.clipboard.writeText(RULES).then(function(){ toast('Regeln kopiert ✓'); }, function(){ r.select(); toast('Markiert – jetzt kopieren'); }); } catch(e) { r.select(); } },
   cfgsave: function(){ var c=parseCfg($('cfgIn').value); if (!c) { $('cfgErr').textContent='Das sieht nicht nach der Firebase-Konfiguration aus. Kopier den ganzen Block mit apiKey, projectId usw.'; return; } cloudMeta.cfg=c; saveMeta(); CLOUD.ready=null; $('cfgErr').textContent='Verbinde …'; cloudInit().then(function(){ return CLOUD.db.collection('s').doc('test_'+rid(24)).set({type:'test', at:Date.now()}); }).then(function(){ toast('✓ Verbunden!'); renderCloud(); }).catch(function(e){ var m=$('cfgErr'); renderCloud(); setTimeout(function(){ var s=$('cloudStat'); if (s) { s.textContent='⚠ '+cloudErr(e); s.style.color='#a3271b'; } }, 50); }); },
   cfgreset: function(t){ if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent='Wirklich entfernen? (Daten in der Cloud bleiben)'; return; } unsub.forEach(function(u){ try{u();}catch(e){} }); unsub=[]; if (activeClub||viewing) leaveContext(); cloudMeta={client:cloudMeta.client, clubs:[], myName:cloudMeta.myName}; saveMeta(); CLOUD.ready=null; normalize(); refreshAll(); renderCloud(); },
@@ -2737,7 +2786,7 @@ document.addEventListener('input', function(e){
 });
 document.addEventListener('change', function(e){
   var t=e.target;
-  if (t.dataset && t.dataset.prog && viewId) { var pv=progLive(t); if (t.dataset.prog==='c') { if (typeof setMyProgress==='function') setMyProgress(viewId, pv.pct, pv.page); } else saveProgress(bookById(viewId), pv); return; }
+  if (t.dataset && t.dataset.prog) { var pbx=t.closest('.progbox'), pbid=(pbx && pbx.dataset.bid) || viewId; if (!pbid) return; var pv=progLive(t); if (t.dataset.prog==='c') { if (typeof setMyProgress==='function') setMyProgress(pbid, pv.pct, pv.page); } else saveProgress(bookById(pbid), pv); return; }
   if (t.dataset && t.dataset.rate && viewId) { var rb=bookById(viewId); if (rb) { rb.rating=Math.round(parseFloat(t.value)*10)/10; refreshAll(); persist(); } return; }
   if (t.dataset && t.dataset.myrate && viewId) { var mv=Math.round(parseFloat(t.value)*10)/10; if (mv) setMyRating(viewId, mv, true); return; }
   if (t.id==='upFront') { var f1=t.files[0]; t.value=''; if (SANDBOX) handleUpload(f1,'cover'); else bookPhoto(f1,'cover'); return; }
@@ -2750,7 +2799,7 @@ document.addEventListener('change', function(e){
   if (t.dataset && t.dataset.sst!==undefined) { var sy=scanFound[+t.dataset.sst]; if (sy) { sy.ftitle=t.value.trim(); } return; }
   if (t.id==='botmWhen') { setBotm({when:t.value}); return; }
   if (t.id==='botmWhere') { setBotm({where:t.value.trim()}); return; }
-  if (t.id==='myName' && activeClub && CLOUD.uid) { CLOUD.db.collection('s').doc(activeClub).collection('members').doc(CLOUD.uid).set({name:myName()},{merge:true}); return; }
+  if (t.id==='myName' && CLOUD.uid && myName()) { setMyName(myName()); return; }
   if (t.id==='bkFile' && t.files[0]) { var fr=new FileReader(); fr.onload=function(){ $('bkIn').value=fr.result; $('bkErr').textContent='Datei geladen – jetzt „Regal ersetzen“ klicken.'; }; fr.readAsText(t.files[0]); t.value=''; return; }
   if (t.id==='f-color') { refreshEdit(); return; }
   if (t.id==='d-wall') { renderDesigner(); return; }
