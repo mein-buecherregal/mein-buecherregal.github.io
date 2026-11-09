@@ -232,6 +232,24 @@ body.dragging .level.drop-over{outline-color:rgba(255,255,255,.45);outline-offse
 .rateval{font-weight:700;font-size:18px;margin-left:8px;min-width:2.2em;color:#2a2420}
 .raterange{width:100%;max-width:240px;accent-color:#e0a526}
 body.readonly .raterange{display:none}
+.progbox{background:rgba(0,0,0,.045);border-radius:12px;padding:10px 12px;margin:0 0 14px}
+.proghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:14px;margin-bottom:6px}
+.progval{font-weight:700;color:#2a2420;white-space:nowrap}
+.progbar{display:block;height:8px;border-radius:5px;background:#e6ddd0;overflow:hidden}
+.progbar i{display:block;height:100%;background:linear-gradient(90deg,#e0a526,#c97c2a);border-radius:5px;transition:width .2s}
+.progbar.small{height:6px}
+.progin{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:14px}
+.progin input[type=number]{width:72px;font:inherit;padding:4px 6px;border:1px solid #d8cfc3;border-radius:8px;background:#fff}
+.progin input[type=range]{flex:1;min-width:140px;accent-color:#c97c2a}
+body.readonly .progin{display:none}
+.proglist{display:flex;flex-direction:column;gap:6px;margin:0 0 14px}
+.progrow{display:grid;grid-template-columns:10px minmax(60px,max-content) 1fr 52px;gap:8px;align-items:center;font-size:13px}
+.pdot{width:10px;height:10px;border-radius:50%}
+.pval{text-align:right;font-weight:600}
+.sp-prog{position:absolute;left:2px;top:calc(8px * var(--s));bottom:calc(8px * var(--s));width:3px;border-radius:2px;background:rgba(255,255,255,.28);z-index:2;pointer-events:none;overflow:hidden}
+.sp-prog i{position:absolute;left:0;right:0;bottom:0;background:#ffd166;border-radius:2px;box-shadow:0 0 4px rgba(255,209,102,.8)}
+.sp-dots{position:absolute;right:1px;top:calc(8px * var(--s));bottom:calc(8px * var(--s));width:8px;z-index:3;pointer-events:none}
+.sp-dots i{position:absolute;right:0;width:7px;height:7px;border-radius:50%;border:1px solid rgba(255,255,255,.95);transform:translateY(50%);box-shadow:0 1px 2px rgba(0,0,0,.45)}
 .meta{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin:0 0 16px}
 .meta dt{color:var(--muted)}.meta dd{margin:0}
 .notes{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;white-space:pre-wrap;margin-bottom:18px}
@@ -983,10 +1001,43 @@ function applyLook(){
   $('shelfTitle').textContent = s.title || 'Mein Bücherregal';
   document.title = s.title || 'Mein Bücherregal';
 }
+/* ---------- 📖 Lesefortschritt ---------- */
+function progPct(b){ if (b.status==='read') return 100; var p=+b.pages||0, pg=+b.page||0; if (p && pg) return Math.min(100, pg/p*100); return Math.min(100, +b.pct||0); }
+function progLabel(pct, page, pages){ return (pct>=100 ? '✓ fertig' : Math.round(pct)+' %')+(pages && page ? ' · S. '+page+' / '+pages : ''); }
+function progBoxHTML(pct, page, pages, kind, title){
+  var a='data-prog="'+kind+'"';
+  return '<div class="progbox" data-pages="'+(pages||0)+'"><div class="proghead"><b>'+(title||'📖 Lesefortschritt')+'</b><span class="progval">'+progLabel(pct,page,pages)+'</span></div><div class="progbar"><i style="width:'+pct.toFixed(1)+'%"></i></div>'+
+    '<div class="progin">'+(pages ? '<label>Seite <input type="number" inputmode="numeric" min="0" max="'+pages+'" value="'+(page||'')+'" placeholder="0" '+a+'> von '+pages+'</label>' : '<span class="hint">Seitenzahl fehlt – Fortschritt in %</span>')+
+    '<input type="range" min="0" max="'+(pages||100)+'" step="1" value="'+(pages ? (page||0) : Math.round(pct))+'" '+a+' aria-label="Lesefortschritt"></div></div>';
+}
+function progressHTML(b){ return b.status==='read' ? '' : progBoxHTML(progPct(b), +b.page||0, +b.pages||0, 'p'); }
+function progLive(t){
+  var box=t.closest('.progbox'), pages=+box.dataset.pages||0, v=parseFloat(t.value)||0, page=0, pct;
+  if (pages) { page=Math.max(0, Math.min(pages, Math.round(v))); pct=page/pages*100; } else pct=Math.max(0, Math.min(100, v));
+  box.querySelectorAll('input[data-prog]').forEach(function(x){ if (x!==t) x.value = pages ? (x.type==='number' ? (page||'') : page) : Math.round(pct); });
+  box.querySelector('.progbar i').style.width=pct.toFixed(1)+'%'; box.querySelector('.progval').textContent=progLabel(pct,page,pages);
+  return {pct:pct, page:page};
+}
+function saveProgress(b, pv){
+  if (!b) return;
+  if (+b.pages) b.page=pv.page; else b.pct=Math.round(pv.pct);
+  if (pv.pct>0 && b.status==='want') setStatus(b,'reading');
+  if (pv.pct>=100 && b.status!=='read') { setStatus(b,'read'); toast('🎉 Fertig gelesen! Als „Gelesen“ markiert.'); }
+  refreshAll(); persist();
+}
+var MCOLS=['#e07a5f','#3d85c6','#2a9d8f','#e9a23b','#9b5de5','#f15bb5','#00a6d6','#7cb342','#ef476f','#8d6e63'];
+function memberColor(uid){ var h=0; uid=String(uid||''); for (var i=0;i<uid.length;i++) h=(h*31+uid.charCodeAt(i))>>>0; return MCOLS[h%MCOLS.length]; }
+function spineProg(b){
+  if (typeof activeClub!=='undefined' && activeClub && typeof clubs!=='undefined' && clubs[activeClub] && typeof clubProgressList==='function') {
+    var c=clubs[activeClub], L=clubProgressList(c, b.id);
+    return L.length ? '<span class="sp-dots">'+L.map(function(x){ return '<i style="bottom:'+Math.min(100,x.pct).toFixed(1)+'%;background:'+memberColor(x.uid)+'"></i>'; }).join('')+'</span>' : '';
+  }
+  var pp=progPct(b); return (b.status!=='read' && pp>0) ? '<span class="sp-prog"><i style="height:'+pp.toFixed(1)+'%"></i></span>' : '';
+}
 function spineHTML(b, preview){
   var cls = 'spine st-'+(b.style||'plain')+' '+b.status+(b.spineImg?' has-img':'');
   return (preview?'':'<div class="slot" data-item="b:'+esc(b.id)+'">')+'<button type="button" class="'+cls+'" '+(preview?'tabindex="-1"':'data-id="'+esc(b.id)+'"')+' style="--w:'+widthOf(b)+';--h:'+heightOf(b)+';--c:'+esc(b.color)+';--t:'+esc(autoText(b))+';font-family:'+fontOf(b)+(b.spineImg?';background-image:url(&quot;'+esc(b.spineImg)+'&quot;)':'')+'" title="'+esc(b.title)+(b.author?' – '+esc(b.author):'')+'">'+
-    '<span class="ribbon"></span><span class="sp-title">'+esc(b.title||'Titel')+'</span><span class="sp-author">'+esc(b.author||'')+'</span></button>'+(preview?'':'</div>');
+    '<span class="ribbon"></span>'+(preview?'':spineProg(b))+'<span class="sp-title">'+esc(b.title||'Titel')+'</span><span class="sp-author">'+esc(b.author||'')+'</span></button>'+(preview?'':'</div>');
 }
 var liveOn = {};
 function isOn(d){ var o=DECO[d.type]; if (!o || o.act!=='toggle') return false; if (d.id in liveOn) return liveOn[d.id]; return d.on!=null ? !!d.on : !!o.defOn; }
@@ -1082,7 +1133,7 @@ function renderDetails(b){
   if (b.isbn) meta += '<dt>ISBN</dt><dd>'+esc(b.isbn)+'</dd>';
   $('details').innerHTML = '<h2>'+esc(b.title)+'</h2><div class="by">'+(b.author?esc(b.author):'&nbsp;')+'</div>'+
     '<div class="pills">'+['want','reading','read'].map(function(s){return '<button type="button" class="pill'+(b.status===s?' on':'')+'" data-status="'+s+'">'+STATUS[s]+'</button>';}).join('')+'</div>'+
-    (activeClub?'':stars)+(meta?'<dl class="meta">'+meta+'</dl>':'')+
+    (activeClub?'':progressHTML(b)+stars)+(meta?'<dl class="meta">'+meta+'</dl>':'')+
     '<div class="notes">'+esc(b.notes||'')+'</div>'+(activeClub?clubDetailsHTML(b):'')+
     '<div class="actions"><button class="btn" data-act="edit">✎ Bearbeiten</button><button class="btn danger" data-act="del">Löschen</button></div>';
 }
@@ -2107,7 +2158,7 @@ function openViewOnly(viewId){
 
 /* ---------- 3) Buchclubs (gemeinsam bearbeiten) ---------- */
 function clubEntry(key){ return cloudMeta.clubs.filter(function(c){ return c.key===key; })[0]; }
-function newClubCache(key){ return {key:key, main:{}, books:{}, decos:{}, ratings:{}, comments:{}, votes:{}, members:{}, synced:{books:{}, decos:{}, settings:''}, loaded:false}; }
+function newClubCache(key){ return {key:key, main:{}, books:{}, decos:{}, ratings:{}, progress:{}, comments:{}, votes:{}, members:{}, synced:{books:{}, decos:{}, settings:''}, loaded:false}; }
 function clubState(c){
   var st = {}; try { st = JSON.parse(c.main.settings||'{}'); } catch(e) {}
   st.decos = Object.keys(c.decos).map(function(k){ return c.decos[k]; });
@@ -2157,12 +2208,13 @@ function listenClub(key){
         var firstS=true;
         unsub.push(ref.collection(name).onSnapshot(function(q){
           q.docChanges().forEach(function(ch){ onDoc(ch.type, ch.doc.id, ch.doc.data()); });
-          if (firstS) { firstS=false; ready(); } else { if (name==='books'||name==='decos') rebuildClub(key); else { renderClubPanel(); refreshClubDetails(); } }
+          if (firstS) { firstS=false; ready(); } else { if (name==='books'||name==='decos') rebuildClub(key); else { renderClubPanel(); refreshClubDetails(); if (name==='progress' && activeClub===key) render(); } }
         }, function(e){ reject(e); }));
       }
       sub('books', function(t,id,d){ if (t==='removed') { delete c.books[id]; delete c.synced.books[id]; } else { try { c.books[id]=JSON.parse(d.d); c.synced.books[id]=d.d; } catch(e){} } });
       sub('decos', function(t,id,d){ if (t==='removed') { delete c.decos[id]; delete c.synced.decos[id]; } else { try { c.decos[id]=JSON.parse(d.d); c.synced.decos[id]=d.d; } catch(e){} } });
       sub('ratings', function(t,id,d){ if (t==='removed') delete c.ratings[id]; else c.ratings[id]=d; });
+      sub('progress', function(t,id,d){ c.progress=c.progress||{}; if (t==='removed') delete c.progress[id]; else c.progress[id]=d; });
       sub('comments', function(t,id,d){ if (t==='removed') delete c.comments[id]; else c.comments[id]=d; });
       sub('votes', function(t,id,d){ if (t==='removed') delete c.votes[id]; else c.votes[id]=d; });
       sub('members', function(t,id,d){ if (t==='removed') delete c.members[id]; else c.members[id]=d; });
@@ -2217,6 +2269,17 @@ function setMyRating(bookId, r, exact){
   if (cur===r && !exact) { delete c.ratings[id]; ref.delete(); } else { c.ratings[id]={bookId:bookId, uid:CLOUD.uid, name:myName(), r:r}; ref.set(c.ratings[id]); }
   refreshClubDetails();
 }
+function setMyProgress(bookId, pct, page){
+  var c=clubs[activeClub]; if (!c) return; c.progress=c.progress||{};
+  var id=bookId+'__'+CLOUD.uid, ref=CLOUD.db.collection('s').doc(c.key).collection('progress').doc(id);
+  c.progress[id]={bookId:bookId, uid:CLOUD.uid, name:myName(), pct:Math.round(pct*10)/10, page:page||0, at:Date.now()};
+  ref.set(c.progress[id]); renderClubPanel(); refreshClubDetails(); render();
+  if (pct>=100) toast('🎉 Fertig gelesen!');
+}
+function clubProgressList(c, bookId){ var p=c.progress||{}; return Object.keys(p).map(function(k){ return p[k]; }).filter(function(x){ return x && x.bookId===bookId && +x.pct>0; }).sort(function(a,b){ return b.pct-a.pct; }); }
+function progListHTML(c, list){
+  return '<div class="proglist">'+list.map(function(x){ var col=memberColor(x.uid); return '<div class="progrow"><span class="pdot" style="background:'+col+'"></span><span class="pname">'+esc(memberName(c, x.uid, x.name))+(x.uid===CLOUD.uid?' (du)':'')+'</span><span class="progbar small"><i style="width:'+Math.min(100,+x.pct).toFixed(1)+'%;background:'+col+'"></i></span><span class="pval">'+(+x.pct>=100?'✓ fertig':Math.round(x.pct)+' %')+'</span></div>'; }).join('')+'</div>';
+}
 function addComment(bookId, text){
   var c=clubs[activeClub]; if (!c || !text.trim()) return;
   var id=rid(14), d={bookId:bookId, uid:CLOUD.uid, name:myName(), text:text.trim().slice(0,2000), at:Date.now()};
@@ -2260,6 +2323,7 @@ function renderClubPanel(){
   h+='<div class="clubgrid"><div class="card"><h3>⭐ Buch des Monats</h3>';
   if (b) h+='<div class="botm"><button type="button" class="rec" data-openbook="'+esc(b.id)+'"><span class="mini" style="'+miniCover(b)+'"></span><span><b>'+esc(b.title)+'</b><small>'+esc(b.author||'')+'</small></span></button><div class="meet"><label class="f">Nächstes Treffen<input type="datetime-local" id="botmWhen" value="'+esc(botm.when||'')+'"></label><label class="f">Ort<input type="text" id="botmWhere" maxlength="80" placeholder="z. B. bei Lena, Café Mondschein" value="'+esc(botm.where||'')+'"></label></div>'+(botm.when?'<p class="hint" style="margin:6px 0 0">📅 '+esc(new Date(botm.when).toLocaleString('de-DE',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}))+(botm.where?' · 📍 '+esc(botm.where):'')+'</p>':'')+'</div>';
   else h+='<p class="hint" style="margin:0">Öffne ein Buch und tippe auf „⭐ Als Buch des Monats“.</p>';
+  if (b) { var PL=clubProgressList(c, b.id); h+='<h4 style="margin:12px 0 6px">📖 Wie weit seid ihr?</h4>'+(PL.length ? progListHTML(c, PL) : '<p class="hint" style="margin:0">Noch niemand hat Fortschritt eingetragen – öffne das Buch und stell deine Seite ein.</p>'); }
   h+='</div><div class="card"><h3>🗳 Abstimmung: Was lesen wir als Nächstes?</h3>';
   var props=Object.keys(c.books).map(function(k){ return c.books[k]; }).filter(function(x){ return x.status==='want'; });
   var allVotes=Object.keys(c.votes).map(function(u){ return {uid:u, v:c.votes[u]}; });
@@ -2278,6 +2342,8 @@ function clubDetailsHTML(b){
   var mine=(c.ratings[b.id+'__'+CLOUD.uid]||{}).r||0, isB=(c.main.botm||{}).bookId===b.id;
   var cm=Object.keys(c.comments).map(function(k){ var x=c.comments[k]; x._id=k; return x; }).filter(function(x){ return x.bookId===b.id; }).sort(function(a,b){ return a.at-b.at; });
   var h='<div class="clubsec"><button class="btn small'+(isB?' primary':'')+'" data-act="botm">'+(isB?'⭐ Buch des Monats':'⭐ Als Buch des Monats')+'</button>';
+  var cpm=(c.progress||{})[b.id+'__'+CLOUD.uid]||{}, cpl=clubProgressList(c, b.id);
+  h+=progBoxHTML(+cpm.pct||0, +cpm.page||0, +b.pages||0, 'c', '📖 Dein Lesefortschritt')+(cpl.length?'<h4>Fortschritt im Club</h4>'+progListHTML(c, cpl):'');
   h+='<h4>Bewertungen im Club'+(rs.length?' · Ø '+avg.toFixed(1).replace('.',',')+' ★':'')+'</h4>'+rateBoxHTML(mine, 'data-mystar', 'data-myrate', 'deine Wertung');
   if (rs.length) h+='<div class="rlist">'+rs.map(function(r){ return '<span>'+esc(memberName(c, r.uid, r.name))+' ★ '+fmtR(r.r)+'</span>'; }).join('')+'</div>';
   h+='<h4>Diskussion ('+cm.length+')</h4><div class="comments">'+cm.map(function(x){ return '<div class="cmt"><b>'+esc(memberName(c, x.uid, x.name))+'</b> <small>'+esc(new Date(x.at).toLocaleString('de-DE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+'</small>'+(x.uid===CLOUD.uid?'<button class="xbtn" data-delcmt="'+esc(x._id)+'" aria-label="Löschen">×</button>':'')+'<p>'+esc(x.text)+'</p></div>'; }).join('')+'</div>';
@@ -2659,6 +2725,7 @@ document.addEventListener('click', function(e){
 document.addEventListener('input', function(e){
   var t=e.target;
   if (t.id==='search') { render(); renderZoom(); return; }
+  if (t.dataset && t.dataset.prog) { progLive(t); return; }
   if (t.dataset && (t.dataset.rate || t.dataset.myrate)) { paintRate(t.closest('.ratebox'), Math.round(parseFloat(t.value)*10)/10); return; }
   if (t.id==='f-color' && draft) { draft.color=t.value; draft._auto=false; readForm(); previewSpine(); return; }
   if (t.id==='d-title') { state.settings.title=t.value; designDirty=true; applyLook(); return; }
@@ -2670,6 +2737,7 @@ document.addEventListener('input', function(e){
 });
 document.addEventListener('change', function(e){
   var t=e.target;
+  if (t.dataset && t.dataset.prog && viewId) { var pv=progLive(t); if (t.dataset.prog==='c') { if (typeof setMyProgress==='function') setMyProgress(viewId, pv.pct, pv.page); } else saveProgress(bookById(viewId), pv); return; }
   if (t.dataset && t.dataset.rate && viewId) { var rb=bookById(viewId); if (rb) { rb.rating=Math.round(parseFloat(t.value)*10)/10; refreshAll(); persist(); } return; }
   if (t.dataset && t.dataset.myrate && viewId) { var mv=Math.round(parseFloat(t.value)*10)/10; if (mv) setMyRating(viewId, mv, true); return; }
   if (t.id==='upFront') { var f1=t.files[0]; t.value=''; if (SANDBOX) handleUpload(f1,'cover'); else bookPhoto(f1,'cover'); return; }
