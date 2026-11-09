@@ -2216,7 +2216,7 @@ function listenClub(key){
   if (c.listening) return Promise.resolve(c);
   c.listening = true;
   return cloudInit().then(function(){
-    var ref=CLOUD.db.collection('s').doc(key), first=0, need=7;
+    var ref=CLOUD.db.collection('s').doc(key), first=0, need=8;
     return new Promise(function(resolve, reject){
       function ready(){ if (++first===need) { c.loaded=true; resolve(c); } }
       var firstMain=true;
@@ -2230,7 +2230,7 @@ function listenClub(key){
         var firstS=true;
         unsub.push(ref.collection(name).onSnapshot(function(q){
           q.docChanges().forEach(function(ch){ onDoc(ch.type, ch.doc.id, ch.doc.data()); });
-          if (firstS) { firstS=false; ready(); } else { if (name==='books'||name==='decos') rebuildClub(key); else { renderClubPanel(); refreshClubDetails(); if (name==='progress' && activeClub===key) render(); } }
+          if (firstS) { firstS=false; ready(); if (activeClub===key && c.loaded!==false) { renderClubPanel(); refreshClubDetails(); } } else { if (name==='books'||name==='decos') rebuildClub(key); else { renderClubPanel(); refreshClubDetails(); if (name==='progress' && activeClub===key) render(); } }
         }, function(e){ reject(e); }));
       }
       sub('books', function(t,id,d){ if (t==='removed') { delete c.books[id]; delete c.synced.books[id]; } else { try { c.books[id]=JSON.parse(d.d); c.synced.books[id]=d.d; } catch(e){} } });
@@ -2344,7 +2344,7 @@ function setBotm(patch){
   renderClubPanel(); refreshClubDetails();
 }
 function clubRatings(c, bookId){ return Object.keys(c.ratings).map(function(k){ return c.ratings[k]; }).filter(function(r){ return r.bookId===bookId; }); }
-function memberName(c, uid, fallback){ return (c.members[uid] && c.members[uid].name) || fallback || 'Jemand'; }
+function memberName(c, uid, fallback){ return (c.members[uid] && c.members[uid].name) || (uid===CLOUD.uid && myName()) || fallback || 'Jemand'; }
 
 /* ---------- Oberfläche ---------- */
 function ctxLabel(){ if (viewing) return '👀 '+(viewing.name ? 'Regal von '+viewing.name : 'Geteiltes Regal'); if (activeClub) { var e=clubEntry(activeClub); return '👥 '+((e&&e.name)||'Buchclub'); } return '📚 Mein Regal'; }
