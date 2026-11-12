@@ -2668,7 +2668,7 @@ function clubDetailsHTML(b){
 function renderCloud(){
   var el=$('cloudbox'), h='<h2>☁️ Online & Teilen</h2>';
   if (SANDBOX) { el.innerHTML = h+'<p>Teilen, Geräte-Sync und Buchclubs funktionieren nur in deiner eigenen Version im Netz (GitHub Pages).</p><div class="actions"><button class="btn primary" data-act="close">OK</button></div>'; return; }
-  h += '<div class="dgroup"><h3>Einladungs- oder Sync-Link bekommen?</h3><div class="row2"><input type="text" id="joinLink" placeholder="Link hier einfügen …"><button class="btn primary" data-act="joinlink">Öffnen</button></div><p class="hint">Praktisch in der App vom Home-Bildschirm: Links öffnen sich sonst in Safari.</p></div>';
+  h += '<div class="dgroup"><h3>Einladungs- oder Sync-Link bekommen?</h3><button class="btn primary" data-act="pastejoin" style="margin-bottom:8px">📋 Kopierten Link einfügen</button><div class="row2"><input type="text" id="joinLink" placeholder="… oder Link hier einfügen"><button class="btn" data-act="joinlink">Öffnen</button></div><p class="hint">Praktisch in der App vom Home-Bildschirm: Links öffnen sich sonst in Safari.</p></div>';
   if (!cloudMeta.cfg) {
     h += '<p style="font-size:14px;margin:0 0 14px">Buchclubs, Teilen und Geräte-Sync brauchen einen kostenlosen Online-Speicher. Den richtet nur eine Person einmal ein – alle anderen, die diese Seite nutzen, können danach sofort loslegen.</p>';
     h += '<div class="dgroup"><h3>Einmalige Einrichtung (ca. 10 Minuten, kostenlos)</h3><ol class="steps">'+
@@ -2712,6 +2712,41 @@ function shareLink(url, title){
   try { navigator.clipboard.writeText(url).then(function(){ toast('Link kopiert ✓'); }, function(){ toast('Bitte Link markieren und kopieren'); }); } catch(e) { toast('Bitte Link markieren und kopieren'); }
 }
 /* Links verarbeiten: #club=… / #view=… / #sync=… (&c=Firebase-Konfiguration) */
+/* ---------- Links auf dem Handy: Browser ↔ App vom Home-Bildschirm ---------- */
+var STANDALONE = window.navigator.standalone===true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+var MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints>1 && /Mac/.test(navigator.platform||''));
+function copyText(t){
+  function fb(){ var ta=document.createElement('textarea'); ta.value=t; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;left:-9999px;top:0'; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length); var ok=false; try { ok=document.execCommand('copy'); } catch(e){} ta.remove(); return ok ? Promise.resolve() : Promise.reject(); }
+  try { return navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t).catch(fb) : fb(); } catch(e) { return fb(); }
+}
+function askChoice(title, text, okLabel, cancelLabel){
+  var c=$('askCancel'), old=c.textContent; c.textContent=cancelLabel||old; c.style.display = cancelLabel===false ? 'none' : '';
+  return askText(title, text, '', '', okLabel, true).then(function(v){ c.textContent=old; c.style.display=''; return v; });
+}
+function offerApp(h){
+  if (STANDALONE || !MOBILE || SANDBOX) return false;
+  var full=location.origin+location.pathname+h;
+  askChoice('📲 In der App öffnen?', 'Hast du die Bücherregal-App auf dem Home-Bildschirm? Links öffnen sich auf dem Handy leider immer im Browser – und der speichert getrennt von der App. Tipp auf „Link kopieren“, dann öffne die App und tippe dort oben auf „Mein Regal ▾“ → „🔗 Einladungslink einfügen“.', '📋 Link kopieren', 'Hier im Browser öffnen').then(function(v){
+    if (v===null) { handleLink(h); return; }
+    copyText(full).then(function(){
+      askChoice('✓ Link kopiert', 'Öffne jetzt die App vom Home-Bildschirm. Tippe oben auf „Mein Regal ▾“ und dann auf „🔗 Einladungslink einfügen“ – fertig.', 'Verstanden', false);
+    }, function(){
+      askText('Link kopieren', 'Kopier diesen Link (lange drauftippen → Alles auswählen → Kopieren) und füg ihn in der App unter „Mein Regal ▾“ → „🔗 Einladungslink einfügen“ ein.', full, '', 'Fertig');
+    });
+  });
+  return true;
+}
+function pasteJoin(){
+  function manual(){
+    askText('🔗 Einladungslink einfügen', 'Füg hier den Link ein, den du bekommen hast (ins Feld tippen → „Einsetzen“).', '', 'https://mein-buecherregal.github.io/#club=…', 'Öffnen').then(function(v){
+      if (v==null) return; var i=String(v).indexOf('#'); if (i<0 || !handleLink(String(v).slice(i).trim())) toast('Das ist kein gültiger Einladungslink.');
+    });
+  }
+  $('ovSwitch').classList.remove('open'); $('ovCloud').classList.remove('open');
+  var p; try { p = navigator.clipboard && navigator.clipboard.readText ? navigator.clipboard.readText() : null; } catch(e) { p=null; }
+  if (!p) { manual(); return; }
+  p.then(function(t){ t=String(t||''); var i=t.indexOf('#'); if (i>=0 && /(club|view|sync)=/.test(t) && handleLink(t.slice(i).trim())) return; manual(); }, manual);
+}
 function handleLink(hash){
   var p={}; String(hash||'').replace(/^#/,'').split('&').forEach(function(kv){ var i=kv.indexOf('='); if (i>0) p[kv.slice(0,i)]=kv.slice(i+1); });
   if (!(p.club||p.view||p.sync)) return false;
@@ -2889,6 +2924,7 @@ var CLOUD_ACTS = {
   ctxmenu: function(){ renderSwitch(); $('ovSwitch').classList.add('open'); },
   cropok: function(){ cropSave(); },
   cropreset: function(){ if (crop) { crop.cx=.5; crop.cy=.5; cropZoomTo(1); } },
+  pastejoin: function(){ pasteJoin(); },
   rename: function(){ askText('Dein Name', 'So sehen dich die anderen in deinen Buchclubs.', myName(), 'Dein Vorname', 'Speichern').then(function(n){ if (n && n.trim()) setMyName(n); }); },
   copyrules: function(){ var r=$('rulesTxt'); try { navigator.clipboard.writeText(RULES).then(function(){ toast('Regeln kopiert ✓'); }, function(){ r.select(); toast('Markiert – jetzt kopieren'); }); } catch(e) { r.select(); } },
   cfgsave: function(){ var c=parseCfg($('cfgIn').value); if (!c) { $('cfgErr').textContent='Das sieht nicht nach der Firebase-Konfiguration aus. Kopier den ganzen Block mit apiKey, projectId usw.'; return; } cloudMeta.cfg=c; saveMeta(); CLOUD.ready=null; $('cfgErr').textContent='Verbinde …'; cloudInit().then(function(){ return CLOUD.db.collection('s').doc('test_'+rid(24)).set({type:'test', at:Date.now()}); }).then(function(){ toast('✓ Verbunden!'); renderCloud(); }).catch(function(e){ var m=$('cfgErr'); renderCloud(); setTimeout(function(){ var s=$('cloudStat'); if (s) { s.textContent='⚠ '+cloudErr(e); s.style.color='#a3271b'; } }, 50); }); },
@@ -2908,7 +2944,8 @@ function renderSwitch(){
   var h='<h2>Regal wechseln</h2><div class="switchlist"><button class="swi'+(!activeClub&&!viewing?' on':'')+'" data-ctx="home">📚 Mein Regal</button>'+
     cloudMeta.clubs.map(function(c){ return '<button class="swi'+(activeClub===c.key?' on':'')+'" data-ctx="'+esc(c.key)+'">👥 '+esc(c.name)+'</button>'; }).join('')+
     (viewing?'<button class="swi on">👀 '+esc(viewing.name?'Regal von '+viewing.name:'Geteiltes Regal')+'</button>':'')+'</div>'+
-    '<div class="actions" style="margin-top:14px"><button class="btn primary" data-act="clubnew">＋ Buchclub gründen</button><button class="btn" data-act="cloud">☁️ Teilen & Einstellungen</button></div>';
+    '<div class="actions" style="margin-top:14px"><button class="btn primary" data-act="pastejoin">🔗 Einladungslink einfügen</button><button class="btn" data-act="clubnew">＋ Buchclub gründen</button><button class="btn" data-act="cloud">☁️ Teilen & Einstellungen</button></div>'+
+    (STANDALONE ? '<p class="hint" style="margin-top:10px">Einladung bekommen? Link in WhatsApp & Co. lange antippen → „Kopieren“, dann hier auf „Einladungslink einfügen“.</p>' : '');
   $('switchbox').innerHTML=h;
 }
 /* ---------- Gesamtsteuerung ---------- */
@@ -3129,7 +3166,7 @@ idbGet('state').then(function(str){
 }).catch(function(){}).then(function(){
   if (SANDBOX) return;
   var h = location.hash;
-  if (h && /(club|view|sync)=/.test(h)) { try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} if (handleLink(h)) return; }
+  if (h && /(club|view|sync)=/.test(h)) { try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} if (offerApp(h)) return; if (handleLink(h)) return; }
   loadSharedCfg().then(function(){ if (!cloudMeta.cfg) return;
     if (cloudMeta.syncKey) listenPersonal();
     if (cloudMeta.active && clubEntry(cloudMeta.active)) switchTo(cloudMeta.active).catch(function(e){ cloudMeta.active=''; saveMeta(); toast(cloudErr(e)); });
