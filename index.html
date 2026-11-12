@@ -940,8 +940,9 @@ var CAT_BREEDS = {
   maine:   {n:'Maine Coon', base:['#a68a68','#7c6447','#4e3d2b'], chest:'#efe2cc', muzzle:'#efe2cc', eye:['#e4e08a','#9aa52a'], nose:'#b0716c', inner:'#d7a39e', stripes:'#3a2b1e', pat:'tabby', shape:'coon'},
   perser:  {n:'Perserkatze', base:['#ffffff','#f3eee6','#d9d0c2'], chest:'', muzzle:'', eye:['#ffd27a','#d9861a'], nose:'#e8a0aa', inner:'#f2c0c4', shape:'fluffy'}
 };
+var catSeq = 0;
 function catSvg(key){
-  var B = CAT_BREEDS[key] || CAT_BREEDS.schwarz, k = 'k'+(CAT_BREEDS[key] ? key : 'schwarz'), sh = B.shape||'';
+  var B = CAT_BREEDS[key] || CAT_BREEDS.schwarz, k = 'k'+(CAT_BREEDS[key] ? key : 'schwarz')+(++catSeq), sh = B.shape||'';
   var fluffy = sh==='fluffy' || sh==='coon', chubby = sh==='chubby' || sh==='fluffy';
   var F='url(#'+k+'F)', H='url(#'+k+'H)';
   var head = chubby ? 'M18 41C17 29 24 21 37 20.5C50 21 57 29 56 41C56 51 48 57 37 57C26 57 18 51 18 41Z'
@@ -1018,7 +1019,7 @@ function catSvg(key){
   s += '</svg>';
   return s;
 }
-DECO.cat.svg = catSvg('tiger');
+try { Object.defineProperty(DECO.cat, 'svg', {get:function(){ return catSvg('tiger'); }, configurable:true}); } catch(e) { DECO.cat.svg = catSvg('tiger'); }
 
 
 function normalize(){
@@ -1940,7 +1941,7 @@ function themeCard(k){
 function decoIcon(d){
   if (d.type==='photo') return d.img ? '<img src="'+esc(d.img)+'" alt="" style="border-radius:3px">' : '📷';
   if (d.type==='art') return (ART[d.art]||ART.sonne).svg.replace('<svg ','<svg width="44" height="44" ');
-  return DECO[d.type] ? styledSvg(DECO[d.type].svg, styleOf(d)) : '';
+  return DECO[d.type] ? styledSvg(d.type==='cat' && typeof catSvg==='function' ? catSvg(d.breed) : DECO[d.type].svg, styleOf(d)) : '';
 }
 function styleChips(sel, target, sample){
   var svg = (DECO[sample]||DECO.plant).svg;
