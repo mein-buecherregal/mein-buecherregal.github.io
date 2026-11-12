@@ -313,7 +313,10 @@ details.design[open]{padding-bottom:14px}
 .scanbox video{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
 .scanframe::after{content:"";position:absolute;left:10%;right:10%;top:36%;height:28%;border:3px solid rgba(255,255,255,.9);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28);pointer-events:none}
 .designer{padding:30px}
-.tabs{display:flex;gap:4px;margin:0 0 20px;border-bottom:1px solid rgba(0,0,0,.1);overflow-x:auto}
+.tabs{display:flex;flex-wrap:wrap;gap:2px 4px;margin:0 0 20px;border-bottom:1px solid rgba(0,0,0,.1);position:sticky;top:0;z-index:4;background:#fbf8f3;padding-top:6px}
+.sheet{overflow-x:hidden;overscroll-behavior:contain}
+.sheet>.close{z-index:6}
+@media (max-width:720px){.tab{padding:8px 10px;font-size:13px}}
 .tab{border:0;background:none;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:#6f655c;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .tab.on{color:#2a2420;border-bottom-color:#2a2420}
 .dgroup{margin-bottom:22px}
@@ -385,6 +388,8 @@ textarea.backup{width:100%;min-height:130px;font-family:ui-monospace,monospace;f
 .bar:hover i{filter:brightness(1.12)}
 .bar .tip{position:absolute;bottom:calc(var(--hgt) + 6px);left:50%;transform:translateX(-50%);background:#2a2420;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;z-index:2}
 .bar:hover .tip{opacity:1}
+.bar:first-child .tip{left:0;transform:none}
+.bar:last-child .tip{left:auto;right:0;transform:none}
 .bar .top{position:absolute;bottom:calc(var(--hgt) + 3px);left:0;right:0;text-align:center;font-size:11px;color:#6f655c}
 .bar:hover .top{opacity:0}
 .axis{display:flex;gap:6px;margin-top:6px}
