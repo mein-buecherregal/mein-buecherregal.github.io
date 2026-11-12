@@ -437,6 +437,8 @@ textarea.backup{width:100%;min-height:130px;font-family:ui-monospace,monospace;f
 .overlay{padding-top:max(18px, calc(env(safe-area-inset-top) + 8px));padding-bottom:max(18px, calc(env(safe-area-inset-bottom) + 8px))}
 .sheet{max-height:calc(100vh - max(18px, calc(env(safe-area-inset-top) + 8px)) - max(18px, calc(env(safe-area-inset-bottom) + 8px)))}
 @supports (height:100dvh){.sheet{max-height:calc(100dvh - max(18px, calc(env(safe-area-inset-top) + 8px)) - max(18px, calc(env(safe-area-inset-bottom) + 8px)))}}
+.sheet{max-height:calc(var(--appvh, 100dvh) - max(18px, calc(env(safe-area-inset-top) + 8px)) - max(18px, calc(env(safe-area-inset-bottom) + 8px)))}
+@media (max-width:720px){.overlay{align-items:flex-start;padding-top:max(14px, calc(env(safe-area-inset-top) + 10px))}.sheet{max-height:calc(var(--appvh, 100dvh) - max(14px, calc(env(safe-area-inset-top) + 10px)) - max(18px, calc(env(safe-area-inset-bottom) + 8px)))}}
 .zoombox{padding-top:calc(22px + env(safe-area-inset-top))}
 main{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 .toast{bottom:calc(24px + env(safe-area-inset-bottom))}
@@ -1428,6 +1430,8 @@ function fitSpineTitles(root){
   ['gesturestart','gesturechange','gestureend'].forEach(function(n){ document.addEventListener(n, stop, {passive:false}); });
   document.addEventListener('touchmove', function(e){ if (e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
 })();
+/* Tatsächlich sichtbare Höhe messen (iPhone-App vom Home-Bildschirm rechnet 100vh oft falsch) */
+(function(){ function setVH(){ document.documentElement.style.setProperty('--appvh', window.innerHeight+'px'); } setVH(); window.addEventListener('resize', setVH); window.addEventListener('orientationchange', function(){ setTimeout(setVH, 300); }); document.addEventListener('visibilitychange', setVH); })();
 var fitTimer=null;
 window.addEventListener('resize', function(){ clearTimeout(fitTimer); fitTimer=setTimeout(function(){ fitSpineTitles($('shelves')); }, 200); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ fitSpineTitles($('shelves')); });
