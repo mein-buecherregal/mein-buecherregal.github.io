@@ -434,7 +434,9 @@ textarea.backup{width:100%;min-height:130px;font-family:ui-monospace,monospace;f
 #bkBanner{padding:0 20px}
 @supports (padding: env(safe-area-inset-top)){
 .topbar{padding-top:calc(22px + env(safe-area-inset-top));padding-left:calc(20px + env(safe-area-inset-left));padding-right:calc(20px + env(safe-area-inset-right))}
-.overlay{padding-top:max(18px, env(safe-area-inset-top));padding-bottom:max(18px, env(safe-area-inset-bottom))}
+.overlay{padding-top:max(18px, calc(env(safe-area-inset-top) + 8px));padding-bottom:max(18px, calc(env(safe-area-inset-bottom) + 8px))}
+.sheet{max-height:calc(100vh - max(18px, calc(env(safe-area-inset-top) + 8px)) - max(18px, calc(env(safe-area-inset-bottom) + 8px)))}
+@supports (height:100dvh){.sheet{max-height:calc(100dvh - max(18px, calc(env(safe-area-inset-top) + 8px)) - max(18px, calc(env(safe-area-inset-bottom) + 8px)))}}
 .zoombox{padding-top:calc(22px + env(safe-area-inset-top))}
 main{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 .toast{bottom:calc(24px + env(safe-area-inset-bottom))}
