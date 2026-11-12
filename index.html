@@ -508,6 +508,10 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
 
 #ovShelfScan{z-index:62}
 #ovDecoAdd{z-index:61}
+.breedchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
+.breedchips button{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid transparent;background:#f7f2ea;border-radius:12px;padding:6px 4px 6px;font:inherit;font-size:11px;line-height:1.15;cursor:pointer;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.breedchips button.on{border-color:#2a2420;background:#fff}
+.breedchips svg{width:56px;height:61px}
 #ovCrop{z-index:66}
 .decoadd.big{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
 .decoadd.big button{padding:12px 6px 10px;font-size:13px;font-weight:600;border-radius:14px;transition:transform .15s,border-color .15s}
@@ -924,6 +928,97 @@ var ART = {
   nacht:{n:'Sternennacht',svg:'<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="#1f2a44"/><circle cx="70" cy="30" r="12" fill="#f3e3a6"/><circle cx="76" cy="26" r="11" fill="#1f2a44"/><g fill="#f3e3a6"><circle cx="20" cy="20" r="1.4"/><circle cx="40" cy="12" r="1"/><circle cx="30" cy="40" r="1.2"/><circle cx="84" cy="60" r="1"/><circle cx="12" cy="56" r="1"/></g><path d="M0 100V78q25-12 50 0t50 0v22z" fill="#2f3f2f"/></svg>'},
   linien:{n:'Line Art',svg:'<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="#f7f3ec"/><circle cx="62" cy="38" r="16" fill="#e8b7a3"/><path d="M20 80c10-30 30-40 44-30s6 30-14 30-20-24 4-36" stroke="#2a2420" stroke-width="1.6" fill="none"/></svg>'}
 };
+/* ---------- 🐈 Realistische Katze in verschiedenen Rassen ---------- */
+var CAT_BREEDS = {
+  schwarz: {n:'Schwarze Katze', base:['#4a4442','#25211f','#121010'], chest:'', muzzle:'', eye:['#f2e27a','#b8a21e'], nose:'#3a2e2c', inner:'#5a4245', whisk:'#cfc8bd'},
+  tiger:   {n:'Tigerkatze', base:['#b49a78','#8a7155','#5a4836'], chest:'#e6d8c0', muzzle:'#efe4d0', eye:['#d9e88a','#7fa32a'], nose:'#c47a7a', inner:'#d9a3a3', stripes:'#3e3024', pat:'tabby'},
+  rot:     {n:'Rote Tigerkatze', base:['#f2b06a','#d98a3e','#a95f22'], chest:'#f7dfbd', muzzle:'#fbe8cc', eye:['#f2d36a','#c98a1a'], nose:'#d8858a', inner:'#eeb0a8', stripes:'#a5521c', pat:'tabby'},
+  tuxedo:  {n:'Schwarz-Weiß', base:['#4a4442','#25211f','#121010'], chest:'#f4f1ea', muzzle:'#f4f1ea', paws:'#f4f1ea', eye:['#d6ec8c','#7ea62e'], nose:'#d58c96', inner:'#5a4245', whisk:'#e8e4dc', pat:'tux'},
+  glueck:  {n:'Glückskatze', base:['#fbf8f2','#efe9de','#d8cfc0'], chest:'', muzzle:'', eye:['#e6d27a','#a88a1e'], nose:'#e29aa2', inner:'#f0b8b8', pat:'calico'},
+  siam:    {n:'Siamkatze', base:['#f6ecda','#e6d6bb','#c9b393'], chest:'', muzzle:'', eye:['#b8e2ff','#2f7fd0'], nose:'#4a3328', inner:'#5a4033', point:'#4b3426', pat:'points'},
+  bkh:     {n:'Britisch Kurzhaar', base:['#a9b2bd','#8892a0','#646d7a'], chest:'', muzzle:'#b8c0ca', eye:['#ffcc66','#d9861a'], nose:'#7a6f78', inner:'#b9a2ad', shape:'chubby'},
+  maine:   {n:'Maine Coon', base:['#a68a68','#7c6447','#4e3d2b'], chest:'#efe2cc', muzzle:'#efe2cc', eye:['#e4e08a','#9aa52a'], nose:'#b0716c', inner:'#d7a39e', stripes:'#3a2b1e', pat:'tabby', shape:'coon'},
+  perser:  {n:'Perserkatze', base:['#ffffff','#f3eee6','#d9d0c2'], chest:'', muzzle:'', eye:['#ffd27a','#d9861a'], nose:'#e8a0aa', inner:'#f2c0c4', shape:'fluffy'}
+};
+function catSvg(key){
+  var B = CAT_BREEDS[key] || CAT_BREEDS.schwarz, k = 'k'+(CAT_BREEDS[key] ? key : 'schwarz'), sh = B.shape||'';
+  var fluffy = sh==='fluffy' || sh==='coon', chubby = sh==='chubby' || sh==='fluffy';
+  var F='url(#'+k+'F)', H='url(#'+k+'H)';
+  var head = chubby ? 'M18 41C17 29 24 21 37 20.5C50 21 57 29 56 41C56 51 48 57 37 57C26 57 18 51 18 41Z'
+                    : 'M21 40C20 29.5 26 22 37 21.5C48 22 54 29.5 53 40C53 49.5 46 55.5 37 55.5C28 55.5 21 49.5 21 40Z';
+  var earL = sh==='fluffy' ? 'M22 33L21 17L32 25Z' : (sh==='chubby' ? 'M22 32L21 15L32 24Z' : 'M23 31L20.5 10L33.5 23Z');
+  var earR = sh==='fluffy' ? 'M52 33L53 17L42 25Z' : (sh==='chubby' ? 'M52 32L53 15L42 24Z' : 'M51 31L53.5 10L40.5 23Z');
+  var inL = sh==='fluffy' ? 'M23.5 30L23 20L30 25.5Z' : 'M24.5 28.5L22.8 15L31 23.5Z';
+  var inR = sh==='fluffy' ? 'M50.5 30L51 20L44 25.5Z' : 'M49.5 28.5L51.2 15L43 23.5Z';
+  var body = fluffy ? 'M13 99C4 99 3 87 7 76C11 64 18 55 27 51L47 51C56 55 63 64 67 76C71 87 70 99 61 99Z'
+                    : 'M16 99C8 99 7 88 10 78C13 66 20 57 28 53L46 53C54 57 61 66 64 78C67 88 66 99 58 99Z';
+  var legs = '<path d="M26.5 68C26 78 26 88 26.5 97L33.5 97C34 88 34 78 33.5 68Z" fill="'+F+'"/><path d="M40.5 68C40 78 40 88 40.5 97L47.5 97C48 88 48 78 47.5 68Z" fill="'+F+'"/>';
+  var paws = '<ellipse cx="30" cy="97" rx="5.2" ry="2.8" fill="'+(B.paws||B.base[1])+'"/><ellipse cx="44" cy="97" rx="5.2" ry="2.8" fill="'+(B.paws||B.base[1])+'"/>'+
+    '<path d="M28 98.5v-2M30 98.8v-2.2M32 98.5v-2M42 98.5v-2M44 98.8v-2.2M46 98.5v-2" stroke="#000" stroke-opacity=".18" stroke-width=".6"/>';
+  var tailW = sh==='coon' ? 11 : (sh==='fluffy' ? 12 : 7);
+  var tailD = 'M60 94C73 97 84 90 84 79C84 70 77 66 72 70';
+  var s = '<svg viewBox="0 0 92 100"><defs>'+
+    '<linearGradient id="'+k+'F" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+B.base[0]+'"/><stop offset=".55" stop-color="'+B.base[1]+'"/><stop offset="1" stop-color="'+B.base[2]+'"/></linearGradient>'+
+    '<radialGradient id="'+k+'H" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="'+B.base[0]+'"/><stop offset=".7" stop-color="'+B.base[1]+'"/><stop offset="1" stop-color="'+B.base[2]+'"/></radialGradient>'+
+    '<radialGradient id="'+k+'E" cx=".45" cy=".4" r=".6"><stop offset="0" stop-color="'+B.eye[0]+'"/><stop offset="1" stop-color="'+B.eye[1]+'"/></radialGradient>'+
+    '<radialGradient id="'+k+'S" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>'+
+    (B.point ? '<radialGradient id="'+k+'P" cx=".5" cy=".6" r=".55"><stop offset="0" stop-color="'+B.point+'"/><stop offset=".65" stop-color="'+B.point+'" stop-opacity=".85"/><stop offset="1" stop-color="'+B.point+'" stop-opacity="0"/></radialGradient>'+
+      '<linearGradient id="'+k+'L" x1="0" y1="0" x2="0" y2="1"><stop offset=".35" stop-color="'+B.point+'" stop-opacity="0"/><stop offset=".85" stop-color="'+B.point+'"/></linearGradient>' : '')+
+    '<clipPath id="'+k+'C"><path d="'+body+'"/><path d="'+head+'"/><path d="M26.5 68C26 78 26 88 26.5 97L33.5 97C34 88 34 78 33.5 68ZM40.5 68C40 78 40 88 40.5 97L47.5 97C48 88 48 78 47.5 68Z"/></clipPath>'+
+    '</defs>';
+  s += '<ellipse cx="42" cy="99" rx="34" ry="2.2" fill="url(#'+k+'S)"/>';
+  /* Schwanz (wedelt) */
+  s += '<g class="tail"><path d="'+tailD+'" stroke="'+(B.point||B.base[1])+'" stroke-width="'+tailW+'" fill="none" stroke-linecap="round"/>'+
+    (B.pat==='tabby' ? '<path d="'+tailD+'" stroke="'+B.stripes+'" stroke-width="'+tailW+'" fill="none" stroke-dasharray="2.6 4.2" opacity=".65"/>' : '')+
+    (B.pat==='calico' ? '<path d="'+tailD+'" stroke="#d9873c" stroke-width="'+tailW+'" fill="none" stroke-dasharray="10 40" stroke-dashoffset="-14"/>' : '')+
+    (fluffy ? '<path d="'+tailD+'" stroke="'+B.base[0]+'" stroke-width="'+(tailW-6)+'" fill="none" stroke-linecap="round" opacity=".45"/>' : '')+'</g>';
+  /* Körper, Beine, Kopf */
+  s += '<path d="'+body+'" fill="'+F+'"/>';
+  if (B.chest && B.pat!=='tux') s += '<ellipse cx="37" cy="68" rx="9" ry="13" fill="'+B.chest+'" opacity=".7"/>';
+  s += legs.replace(/fill="url\([^)]*\)"/g, 'fill="'+F+'" opacity=".55"')+'<path d="M37 72v25" stroke="#000" stroke-opacity=".16" stroke-width="1.2" stroke-linecap="round"/>';
+  if (fluffy) s += '<path d="M22 47C23 56 27 62 30.5 64.5l2 3.5 2-2.6 2.5 3.6 2.5-3.6 2 2.6 2-3.5C47 62 51 56 52 47Z" fill="'+(B.chest||B.base[0])+'"/><path d="M27 58l1.5 4M31 60l1 4.5M37 61v5M43 60l-1 4.5M47 58l-1.5 4" stroke="'+B.base[2]+'" stroke-opacity=".25" stroke-width=".7" stroke-linecap="round"/>';
+  s += '<path d="'+earL+'" fill="'+(B.point||F)+'"/><path d="'+earR+'" fill="'+(B.point||F)+'"/><path d="'+inL+'" fill="'+B.inner+'"/><path d="'+inR+'" fill="'+B.inner+'"/>';
+  if (sh==='coon') s += '<path d="M20.5 10l-1-5M20.8 10.5l1.4-5M53.5 10l1-5M53.2 10.5l-1.4-5" stroke="'+B.base[2]+'" stroke-width="1.1" stroke-linecap="round"/>';
+  s += '<path d="M25 25l-2-3M24.5 27l-2.5-1.5M49 25l2-3M49.5 27l2.5-1.5" stroke="'+B.base[0]+'" stroke-width=".7" opacity=".8"/>';
+  s += '<path d="'+head+'" fill="'+H+'"/>';
+  if (sh==='chubby' || sh==='fluffy') s += '<path d="M18.5 44l-3 2 3.2.6-2.4 2.4 3.4-.2M55.5 44l3 2-3.2.6 2.4 2.4-3.4-.2" fill="'+B.base[1]+'"/>';
+  /* Fellzeichnung, auf die Katze zugeschnitten */
+  var p = '';
+  if (B.pat==='tabby') p += '<g stroke="'+B.stripes+'" stroke-linecap="round" fill="none" opacity=".75">'+
+      '<path d="M31.5 25.5l1.8 5.5M37 23.5v7M42.5 25.5l-1.8 5.5" stroke-width="1.5"/>'+
+      '<path d="M22 40c3 .5 5 .2 6.5-1M22.5 45c3-.2 5-.8 6.5-2M52 40c-3 .5-5 .2-6.5-1M51.5 45c-3-.2-5-.8-6.5-2" stroke-width="1.2"/>'+
+      '<path d="M10 82c5-3 9-3 13-1M8.5 90c5-3 10-3 14-1M12 74c4-2 7-2 10 0M64 82c-5-3-9-3-13-1M65.5 90c-5-3-10-3-14-1M62 74c-4-2-7-2-10 0" stroke-width="2.2"/>'+
+      '<path d="M26.8 78h6.4M26.6 84h6.8M26.6 90h6.8M40.8 78h6.4M40.6 84h6.8M40.6 90h6.8" stroke-width="1.6"/>'+
+      '<path d="M30 56c2 2 5 3 7 3s5-1 7-3" stroke-width="1.6"/></g>';
+  if (B.pat==='calico') p += '<path d="M20 26C26 22 34 24 34 32C34 38 27 42 20 40Z" fill="#d9873c"/><path d="M44 22C52 22 56 30 55 36C50 38 45 33 44 28Z" fill="#2b2522"/>'+
+      '<path d="M6 80C10 66 20 58 28 60C26 72 20 82 8 90Z" fill="#d9873c"/><path d="M50 58C60 62 66 72 66 84C60 86 52 78 48 68Z" fill="#2b2522"/><path d="M52 86C58 86 64 90 64 99L50 99Z" fill="#d9873c"/>';
+  if (B.pat==='points') p += '<ellipse cx="37" cy="44" rx="11" ry="11.5" fill="url(#'+k+'P)"/>'+
+      '<path d="M26.5 68C26 78 26 88 26.5 97L33.5 97C34 88 34 78 33.5 68ZM40.5 68C40 78 40 88 40.5 97L47.5 97C48 88 48 78 47.5 68Z" fill="url(#'+k+'L)"/>';
+  if (B.pat==='tux') p += '<path d="M28 54C31 60 34 62 37 62S43 60 46 54C50 62 49 76 44 84C40 88 34 88 30 84C25 76 24 62 28 54Z" fill="'+B.chest+'"/><path d="M26 89h8v9h-8zM40 89h8v9h-8z" fill="'+B.chest+'"/>';
+  if (p) s += '<g clip-path="url(#'+k+'C)">'+p+'</g>';
+  if (B.muzzle) s += '<ellipse cx="34" cy="46.6" rx="3.6" ry="2.7" fill="'+B.muzzle+'"/><ellipse cx="40" cy="46.6" rx="3.6" ry="2.7" fill="'+B.muzzle+'"/><ellipse cx="37" cy="49.2" rx="3" ry="2" fill="'+B.muzzle+'"/>';
+  /* Schatten unter dem Kopf, Fellglanz */
+  s += '<ellipse cx="37" cy="57.5" rx="12" ry="3.2" fill="url(#'+k+'S)" opacity=".8"/>';
+  s += '<path d="M20 70c-2 6-3 12-2 18M58 72c2 6 3 12 2 18" stroke="#fff" stroke-opacity=".12" stroke-width="2" fill="none"/>';
+  s += paws;
+  /* Augen */
+  var ey = sh==='fluffy' ? 38.5 : 37.5, er = sh==='fluffy' ? [3.6,3.4] : [3.8,2.9];
+  s += '<g class="eyes">';
+  [31,43].forEach(function(cx, i){
+    var rot = i ? -8 : 8;
+    s += '<g transform="rotate('+rot+' '+cx+' '+ey+')"><ellipse cx="'+cx+'" cy="'+ey+'" rx="'+(er[0]+.7)+'" ry="'+(er[1]+.7)+'" fill="#1a1412" opacity=".55"/><ellipse cx="'+cx+'" cy="'+ey+'" rx="'+er[0]+'" ry="'+er[1]+'" fill="url(#'+k+'E)"/>'+
+      '<ellipse cx="'+cx+'" cy="'+ey+'" rx="'+(sh==='fluffy'?1.6:1)+'" ry="'+(er[1]-.3)+'" fill="#0b0908"/><circle cx="'+(cx-1.1)+'" cy="'+(ey-1)+'" r=".8" fill="#fff" opacity=".9"/></g>';
+  });
+  s += '</g>';
+  /* Nase, Maul, Schnurrhaare */
+  var ny = sh==='fluffy' ? 44 : 44.6;
+  s += '<path d="M35.1 '+ny+'h3.8c.3 0 .4.3.2.5l-1.7 1.9c-.2.2-.6.2-.8 0L34.9 '+(ny+.5)+'c-.2-.2-.1-.5.2-.5z" fill="'+B.nose+'"/>';
+  s += '<path d="M37 '+(ny+2.2)+'v1.4M37 '+(ny+3.6)+'c-.9 1.1-2.3 1.2-3.1.3M37 '+(ny+3.6)+'c.9 1.1 2.3 1.2 3.1.3" stroke="#3a2a26" stroke-width=".7" fill="none" stroke-linecap="round" opacity=".8"/>';
+  s += '<g stroke="'+(B.whisk||'#fffaf0')+'" stroke-width=".45" stroke-linecap="round" fill="none" opacity=".85"><path d="M32 47c-5-1.5-10-1.6-15-.6M32 48.2c-5-.4-10 .4-14.5 2.2M32.4 49.3c-4.5.6-8.5 2.3-12 4.6M42 47c5-1.5 10-1.6 15-.6M42 48.2c5-.4 10 .4 14.5 2.2M41.6 49.3c4.5.6 8.5 2.3 12 4.6"/></g>';
+  s += '</svg>';
+  return s;
+}
+DECO.cat.svg = catSvg('tiger');
 
 
 function normalize(){
@@ -1136,7 +1231,7 @@ function decoInner(d){
   var o = DECO[d.type]; if(!o) return '';
   var g = o.glow ? '<span class="glow'+(o.glow.flick?' flick':'')+'" style="--gy:'+o.glow.gy+'px;--gw:'+o.glow.gw+'px"></span>' : '';
   var say = o.say ? '<span class="bubble">'+esc(o.say)+'</span>' : '';
-  return g + say + '<div class="obj" style="--dh:'+o.h+'">'+styledSvg(o.svg, styleOf(d))+'</div>';
+  return g + say + '<div class="obj" style="--dh:'+o.h+'">'+styledSvg(d.type==='cat' && typeof catSvg==='function' ? catSvg(d.breed) : o.svg, styleOf(d))+'</div>';
 }
 function decoName(d){ return d.type==='photo' ? 'Foto' : (d.type==='art' ? 'Kunstdruck' : (DECO[d.type]||{n:'Deko'}).n); }
 function decoHTML(d, still){
@@ -1923,6 +2018,7 @@ function addDeco(type, shelf, level){
   if (state.settings.sort==='manual') d.ord = nextOrd(k, level);
   if (type==='art') { var keys=Object.keys(ART); d.art=keys[state.settings.decos.length % keys.length]; d.frame='gold'; d.orient='hoch'; }
   if (type==='photo') { d.frame='white'; d.orient='hoch'; d.img=''; }
+  if (type==='cat') d.breed='tiger';
   state.settings.decos.push(d); designDirty=true; refreshAll();
   toast(decoName(d)+' steht jetzt im Regal „'+shelfName(decoShelf(d))+'“');
   if (type==='photo' && !shelf) openDecoPop(d.id);
@@ -1948,6 +2044,7 @@ function renderDecoPop(){
     h += dsec('Rahmen', '<div class="framechips">'+Object.keys(FRAMES).map(function(x){ return '<button type="button" class="'+((d.frame||'gold')===x?'on':'')+'" data-dkset="frame" data-v="'+x+'"><i style="background:'+FRAMESW[x]+'"></i>'+esc(FRAMES[x])+'</button>'; }).join('')+'</div>');
     h += dsec('Format', seg('orient', {hoch:'▯ Hochformat', quer:'▭ Querformat'}, d.orient==='quer'?'quer':'hoch'));
   }
+  if (d.type==='cat') h += dsec('Rasse', '<div class="breedchips">'+Object.keys(CAT_BREEDS).map(function(x){ return '<button type="button" class="'+((d.breed||'schwarz')===x?'on':'')+'" data-dkset="breed" data-v="'+x+'">'+catSvg(x)+'<span>'+esc(CAT_BREEDS[x].n)+'</span></button>'; }).join('')+'</div>');
   if (DECO[d.type]) h += dsec('Stil', '<div class="stylechips">'+styleChips(d.style||'', 'item', d.type)+'</div>');
   if (DECO[d.type] && DECO[d.type].act==='toggle') h += dsec('Wenn das Regal öffnet', seg('on', {'1':'💡 an', '0':'aus'}, (d.on!=null ? !!d.on : !!DECO[d.type].defOn) ? '1':'0'));
   h += dsec('Größe', seg('size', {s:'Klein', m:'Mittel', l:'Groß'}, d.size||'m'));
