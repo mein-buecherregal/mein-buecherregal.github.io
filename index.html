@@ -507,6 +507,45 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
 .meet input{min-width:0}
 
 #ovShelfScan{z-index:62}
+#ovDecoAdd{z-index:61}
+#ovCrop{z-index:66}
+.decoadd.big{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.decoadd.big button{padding:12px 6px 10px;font-size:13px;font-weight:600;border-radius:14px;transition:transform .15s,border-color .15s}
+.decoadd.big button:active{transform:scale(.96)}
+.decoadd.big svg{height:56px}
+.decoadd .emo{font-size:38px;line-height:56px}
+.decopop{grid-template-columns:260px 1fr;gap:24px;padding:26px}
+.decoprev{position:sticky;top:0}
+.dtitle{margin:0;font-family:var(--head);font-size:24px}
+.dsec{display:flex;flex-direction:column;gap:8px}
+.dsec-t{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a7f74}
+.seg{display:inline-flex;flex-wrap:wrap;background:#efe8dc;border-radius:12px;padding:3px;gap:3px;align-self:flex-start}
+.seg button{border:0;background:transparent;border-radius:9px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;color:#4a423b}
+.seg button.on{background:#fff;color:#2a2420;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.framechips,.fxchips{display:flex;flex-wrap:wrap;gap:8px}
+.framechips button,.fxchips button{display:flex;flex-direction:column;align-items:center;gap:5px;border:2px solid transparent;background:#fff;border-radius:12px;padding:6px 8px;font:inherit;font-size:12px;cursor:pointer;box-shadow:0 0 0 1px rgba(0,0,0,.1)}
+.framechips button.on,.fxchips button.on,.artchips button.on{border-color:#2a2420}
+.framechips i{width:34px;height:34px;border-radius:6px;box-shadow:inset 0 0 0 6px rgba(0,0,0,.0),0 0 0 1px rgba(0,0,0,.15)}
+.fxthumb{width:44px;height:44px;border-radius:6px;overflow:hidden;display:block}
+.fxthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.fxthumb.pf-bw img{filter:grayscale(1)}
+.fxthumb.pf-sepia img{filter:sepia(.85)}
+.fxthumb.pf-warm img{filter:saturate(1.2) sepia(.25) hue-rotate(-8deg)}
+.artchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px}
+.artchips button{border:2px solid transparent;border-radius:10px;padding:0;overflow:hidden;aspect-ratio:1;cursor:pointer;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.1)}
+.artchips svg{width:100%;height:100%;display:block}
+.photobtns{display:flex;flex-wrap:wrap;gap:8px}
+.placerow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.placerow .sel{max-width:220px}
+.dfoot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;border-top:1px solid rgba(0,0,0,.08);padding-top:14px;margin-top:4px}
+.dfoot .danger{margin-right:auto}
+.cropwrap{display:flex;justify-content:center;padding:6px 0 4px}
+.cropbox{position:relative;width:min(300px,72vw);overflow:hidden;touch-action:none;cursor:grab;background:#ddd;box-shadow:0 10px 24px rgba(0,0,0,.3);--s:1.6}
+.cropbox:active{cursor:grabbing}
+.cropbox img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.cropctl{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:12px;font-size:20px;color:#6f655c}
+.cropctl input{width:min(260px,60vw);accent-color:#2a2420}
+@media (max-width:720px){.decopop{grid-template-columns:1fr;padding:20px 16px;gap:16px}.decoprev{position:relative}}
 .sslist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
 .ssrow{display:grid;grid-template-columns:22px 34px 1fr;gap:10px;align-items:center;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:6px 10px}
 .ssrow.off{opacity:.5}
@@ -718,6 +757,25 @@ body.inclub [data-act=backup],body.inclub #bkBanner{display:none!important}
       <h2>Sicherung</h2>
       <div class="dgroup"><h3>Exportieren</h3><p class="hint" style="margin-top:0">Alle Änderungen werden automatisch auf diesem Gerät gespeichert. Eine Sicherungsdatei brauchst du nur als Notfall-Kopie oder um dein Regal auf ein anderes Gerät zu bringen. Am iPhone wählst du nach dem Tippen „In Dateien sichern“ → iCloud Drive.</p><textarea class="backup" id="bkOut" readonly></textarea><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" data-act="copybk">Kopieren</button><button class="btn online-only" data-act="dlbk">💾 Als Datei sichern (iCloud)</button><span class="hint" id="bkCopied"></span></div></div>
       <div class="dgroup"><h3>Importieren</h3><textarea class="backup" id="bkIn" placeholder="Gesicherten Text hier einfügen…"></textarea><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="filebtn btn">Datei laden<input type="file" accept=".json,application/json,text/plain" id="bkFile"></span><button class="btn danger" data-act="importbk">Regal ersetzen</button><span class="err" id="bkErr"></span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovDecoAdd" data-overlay>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Deko hinzufügen" style="max-width:660px">
+    <button class="close" data-act="close" aria-label="Schließen">×</button>
+    <div class="designer"><h2>✨ Deko hinzufügen</h2><div id="decoAddBody"></div></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovCrop" data-overlay>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Foto zuschneiden" style="max-width:520px">
+    <button class="close" data-act="close" aria-label="Schließen">×</button>
+    <div class="designer"><h2>✂️ Foto zuschneiden</h2>
+      <div class="cropwrap"><div class="cropbox" id="cropBox"><img id="cropImg" alt="" draggable="false"></div></div>
+      <div class="cropctl"><span aria-hidden="true">−</span><input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><span aria-hidden="true">＋</span></div>
+      <p class="hint" style="text-align:center;margin:6px 0 0">Bild mit dem Finger verschieben · mit zwei Fingern oder dem Regler zoomen</p>
+      <div class="actions" style="justify-content:center"><button class="btn" data-act="cropreset">Zurücksetzen</button><button class="btn primary" data-act="cropok">✓ Übernehmen</button></div>
     </div>
   </div>
 </div>
@@ -938,7 +996,7 @@ function flushSave(){ if (designDirty && !(artifactApi && canPublish)) { designD
 setInterval(function(){ if (!drag) flushSave(); }, 1200);
 document.addEventListener('visibilitychange', function(){ if (document.visibilityState==='hidden') flushSave(); });
 window.addEventListener('pagehide', flushSave);
-function busy(){ return drag || ['ovShelfScan','ovEdit','ovDesign','ovBackup','ovScan','ovDeco','ovStats'].some(function(id){ return $(id).classList.contains('open'); }); }
+function busy(){ return drag || ['ovCrop','ovDecoAdd','ovShelfScan','ovEdit','ovDesign','ovBackup','ovScan','ovDeco','ovStats'].some(function(id){ return $(id).classList.contains('open'); }); }
 function doPublish(){
   if (busy()) { saveTimer = setTimeout(doPublish, 1500); return; }
   try { sessionStorage.setItem(LS+'-ui', JSON.stringify({open: viewId, flipped: flipped, scroll: window.scrollY, zoom: zoomKey, live: liveOn})); } catch(e) {}
@@ -1103,7 +1161,7 @@ function render(){
     var count = books.filter(function(b){ return bookShelf(b)===k && matchQ(b,q); }).length;
     if (k==='reading' && !count && !q && levelsOf(k)===1 && !state.settings.decos.some(function(d){return decoShelf(d)==='reading';})) return;
     html += '<section class="unit"><div class="unithead"><div class="plaque" data-rename="'+esc(k)+'" title="Zum Umbenennen klicken"><span class="pname">'+esc(shelfName(k))+'</span> <span>'+count+'</span></div>'+
-      '<div class="shelfbar"><button class="btn" data-lvadd="'+esc(k)+'" title="Etage hinzufügen">＋ Etage</button>'+(levelsOf(k)>1?'<button class="btn" data-lvdel="'+esc(k)+'" title="Unterste Etage entfernen">− Etage</button>':'')+'<button class="btn" data-zoomto="'+esc(k)+'" title="Heranzoomen">⤢</button></div></div>'+
+      '<div class="shelfbar"><button class="btn" data-lvadd="'+esc(k)+'" title="Etage hinzufügen">＋ Etage</button><button class="btn" data-decoadd="'+esc(k)+'" title="Deko hinzufügen">＋ Deko</button>'+(levelsOf(k)>1?'<button class="btn" data-lvdel="'+esc(k)+'" title="Unterste Etage entfernen">− Etage</button>':'')+'<button class="btn" data-zoomto="'+esc(k)+'" title="Heranzoomen">⤢</button></div></div>'+
       caseHTML(k, q, ' data-shelf="'+esc(k)+'" title="Klicken zum Heranzoomen"')+'</section>';
   });
   html += '<button class="addshelf" data-act="newshelf">＋ Neues Regal hinzufügen</button><p class="hintline">Tipp: Bücher und Deko mit der Maus ziehen (am Handy: kurz gedrückt halten) · Klick ins Regal zoomt heran · Deko anklicken probiert sie aus</p>';
@@ -1859,30 +1917,128 @@ function renderDesigner(){
 }
 function setSetting(k,v){ state.settings[k]=v; designDirty=true; refreshAll(); }
 function decoById(id){ return state.settings.decos.filter(function(d){return d.id===id;})[0]; }
-function addDeco(type){
-  var k = state.settings.layout==='status' ? 'read' : 'all';
-  var d = {id:uid('d'), type:type, shelf:k, level:0, pos:100};
-  if (state.settings.sort==='manual') d.ord = nextOrd(k, 0);
+function addDeco(type, shelf, level){
+  var k = shelf || (state.settings.layout==='status' ? 'read' : 'all'); level=+level||0;
+  var d = {id:uid('d'), type:type, shelf:k, level:level, pos:100};
+  if (state.settings.sort==='manual') d.ord = nextOrd(k, level);
   if (type==='art') { var keys=Object.keys(ART); d.art=keys[state.settings.decos.length % keys.length]; d.frame='gold'; d.orient='hoch'; }
   if (type==='photo') { d.frame='white'; d.orient='hoch'; d.img=''; }
   state.settings.decos.push(d); designDirty=true; refreshAll();
   toast(decoName(d)+' steht jetzt im Regal „'+shelfName(decoShelf(d))+'“');
-  if (type==='photo') openDecoPop(d.id);
+  if (type==='photo' && !shelf) openDecoPop(d.id);
+  return d;
 }
 
 /* ---------- Deko bearbeiten (Popup) ---------- */
 var decoPopId = null;
 function openDecoPop(id){ if (!decoById(id)) return; hidePill(); decoPopId = id; renderDecoPop(); $('ovDeco').classList.add('open'); }
+var FRAMESW={gold:'linear-gradient(135deg,#f3d27a,#b8862d)',black:'#222',wood:'linear-gradient(135deg,#a0703c,#5e3b1e)',white:'#fff',none:'repeating-linear-gradient(45deg,#e6e0d6 0 4px,#fff 4px 8px)'};
+function seg(key, items, cur){ return '<div class="seg">'+Object.keys(items).map(function(k){ return '<button type="button" class="'+(String(cur)===String(k)?'on':'')+'" data-dkset="'+key+'" data-v="'+esc(k)+'">'+items[k]+'</button>'; }).join('')+'</div>'; }
+function dsec(title, body){ return '<div class="dsec"><div class="dsec-t">'+title+'</div>'+body+'</div>'; }
 function renderDecoPop(){
   var d = decoById(decoPopId); if (!d) { $('ovDeco').classList.remove('open'); decoPopId=null; return; }
-  var h = '<div class="decoprev" id="decoPrev">'+decoHTML(d, true)+'</div><div class="decoform" data-did="'+d.id+'">'+
-    '<h2 style="margin:0;font-family:var(--head)">'+esc(decoName(d))+'</h2>';
-  if (DECO[d.type]) h += '<div><div class="hint" style="margin-bottom:6px;font-weight:600">Stil</div><div class="stylechips">'+styleChips(d.style||'', 'item', d.type)+'</div></div>';
-  if (d.type==='photo') h += '<p class="hint" style="margin:0">Foto wählen: Knopf unten, Klick auf die Vorschau, Foto auf die Vorschau ziehen oder ein kopiertes Bild mit Strg/Cmd + V einfügen.</p>';
-  h += '<div class="dctl" style="font-size:13px">'+decoControls(d, true)+'</div>'+
-    '<div class="actions" style="margin-top:6px"><button type="button" class="btn danger" data-deldeco="'+d.id+'">Entfernen</button><button type="button" class="btn" data-dupdeco="'+d.id+'">Duplizieren</button><button type="button" class="btn primary" data-act="close">Fertig</button></div></div>';
+  var k=decoShelf(d), sh={}; shelfKeys().forEach(function(x){ sh[x]=shelfName(x); });
+  var h = '<div class="decoprev" id="decoPrev">'+decoHTML(d, true)+'</div><div class="decoform" data-did="'+d.id+'"><h2 class="dtitle">'+esc(decoName(d))+'</h2>';
+  if (d.type==='photo') {
+    h += dsec('Foto', '<div class="photobtns"><label class="filebtn btn primary">📷 '+(d.img?'Anderes Foto':'Foto wählen')+'<input type="file" accept="image/*" data-photo="'+d.id+'"></label>'+(d.img?'<button type="button" class="btn" data-cropdeco="'+d.id+'">✂️ Zuschneiden</button>':'')+'</div>'+(photoMsg[d.id]?'<div class="hint" style="margin-top:6px;color:'+(/✓/.test(photoMsg[d.id])?'#2e6b4f':'#a3271b')+'">'+esc(photoMsg[d.id])+'</div>':''));
+    if (d.img) h += dsec('Filter', '<div class="fxchips">'+Object.keys(PHOTOFX).map(function(x){ return '<button type="button" class="'+((d.pf||'')===x?'on':'')+'" data-dkset="pf" data-v="'+x+'"><span class="fxthumb pf-'+(x||'none')+'"><img src="'+esc(d.img)+'" alt=""></span>'+esc(PHOTOFX[x])+'</button>'; }).join('')+'</div>');
+  }
+  if (d.type==='art') h += dsec('Motiv', '<div class="artchips">'+Object.keys(ART).map(function(x){ return '<button type="button" class="'+(d.art===x?'on':'')+'" data-dkset="art" data-v="'+x+'" title="'+esc(ART[x].n)+'">'+ART[x].svg+'</button>'; }).join('')+'</div>');
+  if (d.type==='art' || d.type==='photo') {
+    h += dsec('Rahmen', '<div class="framechips">'+Object.keys(FRAMES).map(function(x){ return '<button type="button" class="'+((d.frame||'gold')===x?'on':'')+'" data-dkset="frame" data-v="'+x+'"><i style="background:'+FRAMESW[x]+'"></i>'+esc(FRAMES[x])+'</button>'; }).join('')+'</div>');
+    h += dsec('Format', seg('orient', {hoch:'▯ Hochformat', quer:'▭ Querformat'}, d.orient==='quer'?'quer':'hoch'));
+  }
+  if (DECO[d.type]) h += dsec('Stil', '<div class="stylechips">'+styleChips(d.style||'', 'item', d.type)+'</div>');
+  if (DECO[d.type] && DECO[d.type].act==='toggle') h += dsec('Wenn das Regal öffnet', seg('on', {'1':'💡 an', '0':'aus'}, (d.on!=null ? !!d.on : !!DECO[d.type].defOn) ? '1':'0'));
+  h += dsec('Größe', seg('size', {s:'Klein', m:'Mittel', l:'Groß'}, d.size||'m'));
+  var lv={}; for (var i=0;i<levelsOf(k);i++) lv[i]=(i+1)+'. Etage';
+  h += dsec('Platz', '<div class="placerow"><select class="sel" data-dk="shelf" aria-label="Regal">'+opt(sh, k)+'</select>'+(levelsOf(k)>1 ? seg('level', lv, String(lvl(d,k))) : '')+'</div><div class="hint" style="margin-top:6px">Im Regal kannst du die Deko auch mit dem Finger verschieben (gedrückt halten und ziehen).</div>');
+  h += '<div class="dfoot"><button type="button" class="btn danger" data-deldeco="'+d.id+'">🗑 Entfernen</button><button type="button" class="btn" data-dupdeco="'+d.id+'">⧉ Duplizieren</button><button type="button" class="btn primary" data-act="close">Fertig</button></div></div>';
   $('decopop').innerHTML = h;
 }
+function applyDk(dd, k, v){
+  if (!dd) return;
+  if (k==='on') { dd.on = v==='1'; delete liveOn[dd.id]; }
+  else if (k==='level') { dd.level=+v; if (state.settings.sort==='manual') dd.ord = nextOrd(decoShelf(dd), +v); }
+  else if (k==='shelf') { dd.shelf=v; dd.level=0; if (state.settings.sort==='manual') dd.ord = nextOrd(v, 0); }
+  else dd[k]=v;
+  if (k==='type') { if (v==='art' && !dd.art) { dd.art='sonne'; dd.frame=dd.frame||'gold'; dd.orient=dd.orient||'hoch'; } if (v==='photo') { dd.frame=dd.frame||'white'; dd.orient=dd.orient||'hoch'; } }
+  if (k==='orient' && dd.type==='photo' && dd.imgSrc) { var c=dd.crop||{}; cropRender(dd.imgSrc, v==='quer'?FRAME_AR.quer:FRAME_AR.hoch, c.cx, c.cy, c.z||1).then(function(u){ dd.img=u; designDirty=true; refreshAll(); }).catch(function(){}); }
+  designDirty=true; refreshAll();
+}
+
+/* ---------- ＋ Deko direkt am Regal ---------- */
+var decoTarget={shelf:'', level:0};
+function openDecoAdd(k){ decoTarget={shelf:k, level:0}; renderDecoAdd(); $('ovDecoAdd').classList.add('open'); }
+function renderDecoAdd(){
+  var k=decoTarget.shelf, s=state.settings, lv={}; for (var i=0;i<levelsOf(k);i++) lv[i]=(i+1)+'. Etage';
+  $('decoAddBody').innerHTML = '<p class="hint" style="margin:0 0 12px">Kommt ins Regal <b>„'+esc(shelfName(k))+'“</b>. Danach kannst du es verschieben und anpassen.</p>'+
+    (levelsOf(k)>1 ? '<div class="seg" style="margin-bottom:14px">'+Object.keys(lv).map(function(x){ return '<button type="button" class="'+(decoTarget.level==x?'on':'')+'" data-dalevel="'+x+'">'+lv[x]+'</button>'; }).join('')+'</div>' : '')+
+    '<div class="decoadd big">'+
+      '<button type="button" data-adddeco="photo"><span class="emo">📷</span>Eigenes Foto</button>'+
+      '<button type="button" data-adddeco="art">'+ART.berge.svg.replace('<svg ','<svg width="56" height="56" ')+'Kunstdruck</button>'+
+      Object.keys(DECO).map(function(x){ return '<button type="button" data-adddeco="'+x+'">'+styledSvg(DECO[x].svg, s.decoStyle)+DECO[x].n+'</button>'; }).join('')+'</div>';
+}
+
+/* ---------- ✂️ Foto für den Bilderrahmen zuschneiden ---------- */
+var FRAME_AR={hoch:126/162, quer:186/136};
+function cropRender(src, ar, cx, cy, z){
+  return new Promise(function(res, rej){
+    var im=new Image(); im.onload=function(){
+      var W=im.naturalWidth, H=im.naturalHeight; z=Math.max(1, +z||1);
+      var sw, sh; if (W/H > ar) { sh=H/z; sw=sh*ar; } else { sw=W/z; sh=sw/ar; }
+      cx = cx==null ? .5 : cx; cy = cy==null ? .5 : cy;
+      var sx=Math.max(0, Math.min(W-sw, cx*W-sw/2)), sy=Math.max(0, Math.min(H-sh, cy*H-sh/2));
+      var long=760, ow=ar>=1?long:Math.round(long*ar), oh=ar>=1?Math.round(long/ar):long;
+      var c=document.createElement('canvas'); c.width=ow; c.height=oh; c.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, ow, oh);
+      res(c.toDataURL('image/jpeg', .85));
+    }; im.onerror=rej; im.src=src;
+  });
+}
+var crop=null;
+function openCrop(id){
+  var d=decoById(id); if (!d || !(d.imgSrc||d.img)) return;
+  var c=d.crop||{};
+  crop={id:id, src:d.imgSrc||d.img, ar:d.orient==='quer'?FRAME_AR.quer:FRAME_AR.hoch, cx:c.cx!=null?c.cx:.5, cy:c.cy!=null?c.cy:.5, z:c.z||1, W:0, H:0, nw:0, nh:0, ptr:{}};
+  var box=$('cropBox'), img=$('cropImg');
+  box.className='cropbox fr-'+esc(d.frame||'white'); box.style.aspectRatio=crop.ar;
+  img.onload=function(){ crop.nw=img.naturalWidth; crop.nh=img.naturalHeight; cropLayout(); };
+  img.src=crop.src; $('cropZoom').value=crop.z;
+  $('ovCrop').classList.add('open');
+  requestAnimationFrame(cropLayout);
+}
+function cropLayout(){
+  if (!crop || !crop.nw) return;
+  var box=$('cropBox'), img=$('cropImg'), W=box.clientWidth, H=box.clientHeight; if (!W) return;
+  var s0=Math.max(W/crop.nw, H/crop.nh), s=s0*crop.z, iw=crop.nw*s, ih=crop.nh*s;
+  var hx=W/2/iw, hy=H/2/ih; crop.cx=Math.max(hx, Math.min(1-hx, crop.cx)); crop.cy=Math.max(hy, Math.min(1-hy, crop.cy));
+  crop.iw=iw; crop.ih=ih;
+  img.style.width=iw+'px'; img.style.height=ih+'px'; img.style.transform='translate('+(W/2-crop.cx*iw)+'px,'+(H/2-crop.cy*ih)+'px)';
+}
+function cropZoomTo(z){ if (!crop) return; crop.z=Math.max(1, Math.min(4, z)); $('cropZoom').value=crop.z; cropLayout(); }
+function cropSave(){
+  if (!crop) return; var d=decoById(crop.id), cc=crop; if (!d) return;
+  cropRender(cc.src, cc.ar, cc.cx, cc.cy, cc.z).then(function(u){ d.img=u; d.crop={cx:cc.cx, cy:cc.cy, z:cc.z}; if (!d.imgSrc) d.imgSrc=cc.src; designDirty=true; refreshAll(); if (!$('ovDeco').classList.contains('open') && !$('ovDesign').classList.contains('open')) { designDirty=false; persist(); } toast('✂️ Zugeschnitten'); });
+  crop=null; $('ovCrop').classList.remove('open');
+}
+(function(){
+  var box=$('cropBox'); if (!box) return;
+  function dist(p){ var k=Object.keys(p); if (k.length<2) return 0; var a=p[k[0]], b=p[k[1]]; return Math.hypot(a.x-b.x, a.y-b.y); }
+  box.addEventListener('pointerdown', function(e){ if (!crop) return; e.preventDefault(); try { box.setPointerCapture(e.pointerId); } catch(x){} crop.ptr[e.pointerId]={x:e.clientX, y:e.clientY}; crop.d0=dist(crop.ptr); crop.z0=crop.z; });
+  box.addEventListener('pointermove', function(e){
+    if (!crop || !crop.ptr[e.pointerId]) return; e.preventDefault();
+    var p=crop.ptr[e.pointerId], n=Object.keys(crop.ptr).length;
+    if (n===1) { crop.cx -= (e.clientX-p.x)/crop.iw; crop.cy -= (e.clientY-p.y)/crop.ih; }
+    p.x=e.clientX; p.y=e.clientY;
+    if (n>=2 && crop.d0) { cropZoomTo(crop.z0*dist(crop.ptr)/crop.d0); return; }
+    cropLayout();
+  });
+  function up(e){ if (crop) { delete crop.ptr[e.pointerId]; crop.d0=dist(crop.ptr); crop.z0=crop.z; } }
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  box.addEventListener('wheel', function(e){ if (!crop) return; e.preventDefault(); cropZoomTo(crop.z*Math.exp(-e.deltaY*0.0015)); }, {passive:false});
+  $('cropZoom').addEventListener('input', function(){ cropZoomTo(+this.value); });
+  window.addEventListener('resize', cropLayout);
+})();
 function pickPhotoFor(id){
   var inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.style.cssText='position:fixed;left:-9999px;opacity:0';
   inp.addEventListener('change', function(){ var d=decoById(id), f=inp.files && inp.files[0]; if (d && f) uploadDecoPhoto(d, f); inp.remove(); });
@@ -1890,7 +2046,7 @@ function pickPhotoFor(id){
 }
 function uploadDecoPhoto(d, f){
   photoMsg[d.id]='Lädt…'; refreshAll();
-  storeImage(f, 760).then(function(r){ d.img=r.url; photoMsg[d.id]='✓ Foto übernommen'; designDirty=true; refreshAll(); toast('✓ Foto übernommen'); if (!$('ovDeco').classList.contains('open') && !$('ovDesign').classList.contains('open')) { designDirty=false; persist(); } setTimeout(function(){ delete photoMsg[d.id]; }, 4000); })
+  storeImage(f, 1200).then(function(r){ d.imgSrc=r.url; d.crop={cx:.5, cy:.5, z:1}; return cropRender(r.url, d.orient==='quer'?FRAME_AR.quer:FRAME_AR.hoch, .5, .5, 1).then(function(u){ d.img=u; return r; }); }).then(function(r){ photoMsg[d.id]='✓ Foto übernommen – du kannst es jetzt zuschneiden'; designDirty=true; refreshAll(); openCrop(d.id); if (!$('ovDeco').classList.contains('open') && !$('ovDesign').classList.contains('open')) { designDirty=false; persist(); } setTimeout(function(){ delete photoMsg[d.id]; }, 4000); })
     .catch(function(e){ photoMsg[d.id]=imgError(e); refreshAll(); toast(imgError(e)); });
 }
 
@@ -2628,6 +2784,8 @@ function errToast(e){ if (e && e.message==='cancel') return; var m=e && e.messag
 var CLOUD_ACTS = {
   cloud: function(){ loadSharedCfg().then(function(){ if ($('ovCloud').classList.contains('open')) renderCloud(); }); renderCloud(); $('ovCloud').classList.add('open'); $('ovCloud').querySelector('.sheet').scrollTop=0; },
   ctxmenu: function(){ renderSwitch(); $('ovSwitch').classList.add('open'); },
+  cropok: function(){ cropSave(); },
+  cropreset: function(){ if (crop) { crop.cx=.5; crop.cy=.5; cropZoomTo(1); } },
   rename: function(){ askText('Dein Name', 'So sehen dich die anderen in deinen Buchclubs.', myName(), 'Dein Vorname', 'Speichern').then(function(n){ if (n && n.trim()) setMyName(n); }); },
   copyrules: function(){ var r=$('rulesTxt'); try { navigator.clipboard.writeText(RULES).then(function(){ toast('Regeln kopiert ✓'); }, function(){ r.select(); toast('Markiert – jetzt kopieren'); }); } catch(e) { r.select(); } },
   cfgsave: function(){ var c=parseCfg($('cfgIn').value); if (!c) { $('cfgErr').textContent='Das sieht nicht nach der Firebase-Konfiguration aus. Kopier den ganzen Block mit apiKey, projectId usw.'; return; } cloudMeta.cfg=c; saveMeta(); CLOUD.ready=null; $('cfgErr').textContent='Verbinde …'; cloudInit().then(function(){ return CLOUD.db.collection('s').doc('test_'+rid(24)).set({type:'test', at:Date.now()}); }).then(function(){ toast('✓ Verbunden!'); renderCloud(); }).catch(function(e){ var m=$('cfgErr'); renderCloud(); setTimeout(function(){ var s=$('cloudStat'); if (s) { s.textContent='⚠ '+cloudErr(e); s.style.color='#a3271b'; } }, 50); }); },
@@ -2662,7 +2820,7 @@ function refreshAll(){
 }
 function closeTop(){
   hidePill();
-  var order=['ovAsk','ovShelfScan','ovScan','ovPic','ovDeco','ovEdit','ovView','ovSwitch','ovCloud','ovStats','ovBackup','ovDesign','ovShelf'];
+  var order=['ovCrop','ovAsk','ovDecoAdd','ovShelfScan','ovScan','ovPic','ovDeco','ovEdit','ovView','ovSwitch','ovCloud','ovStats','ovBackup','ovDesign','ovShelf'];
   if ($('ovAsk').classList.contains('open')) { askDone(null); return; }
   for (var i=0;i<order.length;i++){
     var id=order[i]; if (!$(id).classList.contains('open')) continue;
@@ -2709,6 +2867,10 @@ document.addEventListener('click', function(e){
   if (t.dataset.zoom) { zoomLevel += t.dataset.zoom==='in' ? 1 : -1; zoomLevel=Math.max(-3,Math.min(4,zoomLevel)); renderZoom(); return; }
   if (t.dataset.zoomlevel) { addLevel(t.dataset.zoomlevel); return; }
   if (t.dataset.lvadd) { addLevel(t.dataset.lvadd); return; }
+  if (t.dataset.decoadd) { openDecoAdd(t.dataset.decoadd); return; }
+  if (t.dataset.dalevel!==undefined) { decoTarget.level=+t.dataset.dalevel; renderDecoAdd(); return; }
+  if (t.dataset.dkset) { var dz=t.closest('[data-did]'); applyDk(dz && decoById(dz.dataset.did), t.dataset.dkset, t.dataset.v); return; }
+  if (t.dataset.cropdeco) { openCrop(t.dataset.cropdeco); return; }
   if (t.dataset.lvdel) { removeLevel(t.dataset.lvdel); return; }
   if (t.dataset.delshelf) { if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent='Sicher?'; return; } deleteShelf(t.dataset.delshelf); return; }
   if (t.dataset.mvshelf) { moveShelf(t.dataset.mvshelf, +t.dataset.dir); return; }
@@ -2772,7 +2934,10 @@ document.addEventListener('click', function(e){
   if (t.dataset.sort) { if (t.dataset.sort==='manual' && state.settings.sort!=='manual') captureOrder(); return setSetting('sort', t.dataset.sort); }
   if (t.dataset.font) return setSetting('font', t.dataset.font);
   if (t.dataset.head) return setSetting('head', t.dataset.head);
-  if (t.dataset.adddeco) { addDeco(t.dataset.adddeco); return; }
+  if (t.dataset.adddeco) {
+    if ($('ovDecoAdd').classList.contains('open')) { $('ovDecoAdd').classList.remove('open'); var nd=addDeco(t.dataset.adddeco, decoTarget.shelf, decoTarget.level); openDecoPop(nd.id); if (nd.type==='photo') pickPhotoFor(nd.id); return; }
+    addDeco(t.dataset.adddeco); return;
+  }
   if (t.dataset.deldeco) {
     state.settings.decos = state.settings.decos.filter(function(d){return d.id!==t.dataset.deldeco;}); designDirty=true;
     if (decoPopId===t.dataset.deldeco) closeTop();
@@ -2813,16 +2978,7 @@ document.addEventListener('change', function(e){
   if (t.id==='d-wall') { renderDesigner(); return; }
   if (t.dataset && t.dataset.sname) { renderDesigner(); return; }
   if (t.dataset && t.dataset.photo) { var dp=decoById(t.dataset.photo), f=t.files && t.files[0]; t.value=''; if (dp && f) uploadDecoPhoto(dp, f); return; }
-  if (t.dataset && t.dataset.dk) {
-    var dd=decoById(t.closest('[data-did]').dataset.did); if(!dd) return;
-    var k=t.dataset.dk, v=t.value;
-    if (k==='on') { dd.on = v==='1'; delete liveOn[dd.id]; }
-    else if (k==='level') { dd.level=+v; if (state.settings.sort==='manual') dd.ord = nextOrd(decoShelf(dd), +v); }
-    else if (k==='shelf') { dd.shelf=v; dd.level=0; if (state.settings.sort==='manual') dd.ord = nextOrd(v, 0); }
-    else dd[k]=v;
-    if (k==='type') { if (v==='art' && !dd.art) { dd.art='sonne'; dd.frame=dd.frame||'gold'; dd.orient=dd.orient||'hoch'; } if (v==='photo') { dd.frame=dd.frame||'white'; dd.orient=dd.orient||'hoch'; } }
-    designDirty=true; refreshAll(); return;
-  }
+  if (t.dataset && t.dataset.dk) { applyDk(decoById(t.closest('[data-did]').dataset.did), t.dataset.dk, t.value); return; }
   if (draft && /^f-/.test(t.id)) { readForm(); refreshEdit(); }
 });
 $('editForm').addEventListener('submit', function(e){ e.preventDefault(); saveDraft(false); });
